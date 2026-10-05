@@ -2,6 +2,7 @@ import logging
 import math
 import os
 import re
+import unicodedata
 import uuid
 from datetime import datetime, timezone
 from typing import Literal
@@ -83,6 +84,64 @@ PURCHASE_REQUEST_STATUS_TRANSITIONS = {
     "Vente réalisée": set(),
     "Vente annulée": set(),
 }
+UNAVAILABLE_VEHICLE_STATUSES = {
+    "indisponible",
+    "reserve",
+    "reserved",
+    "booked",
+}
+PUBLIC_VEHICLE_FIELDS = {
+    "brand",
+    "model",
+    "category",
+    "fuel",
+    "transmission",
+    "seats",
+    "pricePerDay",
+    "prixParJour",
+    "currency",
+    "features",
+    "isAvailable",
+    "status",
+    "statut",
+    "disponibilite",
+    "imageUrl",
+    "imageUrls",
+    "photo_url",
+    "photo_urls",
+    "description",
+    "description_vehicule",
+    "city",
+    "ville",
+    "commune",
+    "location",
+    "localisation",
+    "adresse",
+    "rating",
+    "note",
+    "reviewsCount",
+    "avis",
+    "createdAt",
+}
+PUBLIC_VEHICLE_SALE_FIELDS = {
+    "brand",
+    "model",
+    "year",
+    "mileage",
+    "vehicleType",
+    "transmission",
+    "fuel",
+    "condition",
+    "priceUsd",
+    "priceNegotiable",
+    "city",
+    "commune",
+    "description",
+    "imageUrl",
+    "imageUrls",
+    "status",
+    "createdAt",
+}
 
 
 class VehicleAvailabilityUpdate(BaseModel):
@@ -110,6 +169,38 @@ class VehicleUpdate(BaseModel):
     is_available: bool
     city: str = ""
     commune: str = ""
+
+
+def _normalized_vehicle_status(value: object) -> str:
+    return unicodedata.normalize("NFD", str(value or "").strip().lower()).encode(
+        "ascii", "ignore"
+    ).decode("ascii")
+
+
+def _is_publicly_available_vehicle(vehicle: dict) -> bool:
+    status = _normalized_vehicle_status(
+        vehicle.get("status") or vehicle.get("statut") or vehicle.get("disponibilite")
+    )
+    return (
+        vehicle.get("isAvailable") not in {False, "false"}
+        and status not in UNAVAILABLE_VEHICLE_STATUSES
+    )
+
+
+def _public_vehicle(vehicle: dict, vehicle_id: str) -> dict:
+    return {
+        key: value
+        for key, value in vehicle.items()
+        if key in PUBLIC_VEHICLE_FIELDS
+    } | {"id": vehicle_id}
+
+
+def _public_vehicle_sale(sale: dict, sale_id: str) -> dict:
+    return {
+        key: value
+        for key, value in sale.items()
+        if key in PUBLIC_VEHICLE_SALE_FIELDS
+    } | {"id": sale_id}
 
 
 def _parse_features(features: str) -> list[str]:
@@ -194,6 +285,25 @@ def lister_voitures():
         raise HTTPException(
             status_code=500,
             detail="Impossible de récupérer les voitures",
+        ) from exc
+
+    vehicles.sort(key=lambda vehicle: str(vehicle.get("createdAt", "")), reverse=True)
+    return {"vehicles": vehicles}
+
+
+@router.get("/api/public/voitures")
+def lister_voitures_publiques():
+    try:
+        vehicles = []
+        for document in db.collection("vehicles").stream():
+            vehicle = document.to_dict() or {}
+            if _is_publicly_available_vehicle(vehicle):
+                vehicles.append(_public_vehicle(vehicle, document.id))
+    except Exception as exc:
+        logger.exception("Erreur lors de la récupération des voitures publiques")
+        raise HTTPException(
+            status_code=500,
+            detail="Impossible de récupérer les voitures publiques",
         ) from exc
 
     vehicles.sort(key=lambda vehicle: str(vehicle.get("createdAt", "")), reverse=True)
@@ -740,6 +850,25 @@ def lister_annonces_vente_voitures():
         raise HTTPException(
             status_code=500,
             detail="Impossible de récupérer les annonces de vente",
+        ) from exc
+
+    sales.sort(key=lambda sale: str(sale.get("createdAt", "")), reverse=True)
+    return {"sales": sales}
+
+
+@router.get("/api/public/voitures/ventes")
+def lister_annonces_vente_voitures_publiques():
+    try:
+        sales = []
+        for document in db.collection("vehicleSales").stream():
+            sale = document.to_dict() or {}
+            if _normalized_vehicle_status(sale.get("status")) == "disponible":
+                sales.append(_public_vehicle_sale(sale, document.id))
+    except Exception as exc:
+        logger.exception("Erreur lors de la récupération des annonces de vente publiques")
+        raise HTTPException(
+            status_code=500,
+            detail="Impossible de récupérer les annonces de vente publiques",
         ) from exc
 
     sales.sort(key=lambda sale: str(sale.get("createdAt", "")), reverse=True)

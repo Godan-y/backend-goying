@@ -113,6 +113,8 @@ Collection `prestataires` :
 - `GET /voitures/demandes-achat` pour afficher les demandes d'achat automobile
 - `GET /voitures/soumissions` pour afficher les propositions de véhicules des utilisateurs
 - `GET /api`
+- `GET /api/public/voitures` retourne uniquement les voitures disponibles, sans données privées
+- `GET /api/public/voitures/ventes` retourne uniquement les annonces de vente disponibles, sans le WhatsApp du vendeur
 - `POST /login`
 - `POST /api/login`
 - `GET /dashboard/prestataires` avec un token de rôle `prestataires`
