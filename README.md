@@ -115,6 +115,7 @@ Collection `prestataires` :
 - `GET /api`
 - `GET /api/public/voitures` retourne uniquement les voitures disponibles, sans données privées
 - `GET /api/public/voitures/ventes` retourne uniquement les annonces de vente disponibles, sans le WhatsApp du vendeur
+- `POST /api/booking-reviews` accepte le jeton Firebase du client et enregistre un seul avis pour une réservation terminée
 - `POST /login`
 - `POST /api/login`
 - `GET /dashboard/prestataires` avec un token de rôle `prestataires`

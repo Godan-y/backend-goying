@@ -1,10 +1,12 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
+from firebase_admin import auth as firebase_auth
 from jose import JWTError, jwt
 
 from auth import JWT_ALGORITHM, JWT_SECRET_KEY
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+firebase_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_current_gestionnaire(token: str = Depends(oauth2_scheme)):
@@ -42,3 +44,23 @@ def require_role(expected_role: str):
         return gestionnaire
 
     return dependency
+
+
+def get_current_firebase_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(firebase_bearer_scheme),
+):
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentification client requise",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        return firebase_auth.verify_id_token(credentials.credentials)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session client invalide ou expirée",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc

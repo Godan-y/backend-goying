@@ -12,6 +12,7 @@ from firebase import db
 from services.dashboards import router as dashboards_router
 from services.prestataires import router as prestataires_router
 from services.maisons import router as maisons_router
+from services.reviews import router as reviews_router
 from services.voitures import router as voitures_router
 app = FastAPI(title="Plateforme de services")
 app.add_middleware(
@@ -24,6 +25,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(reviews_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
