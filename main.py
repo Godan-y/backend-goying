@@ -11,6 +11,7 @@ from auth import create_access_token, verify_password
 from firebase import db
 from services.dashboards import router as dashboards_router
 from services.prestataires import router as prestataires_router
+from services.provider_portal import router as provider_portal_router
 from services.maisons import router as maisons_router
 from services.reviews import router as reviews_router
 from services.voitures import router as voitures_router
@@ -26,6 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(reviews_router)
+app.include_router(provider_portal_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
