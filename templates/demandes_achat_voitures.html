@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Demandes d'achat de voitures</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell vehicle-sales-page" data-purchase-requests-page data-endpoint="/api/voitures/demandes-achat">
+    <header class="vehicle-sales-header">
+        <a class="vehicle-sales-brand" href="/gestion/voitures" aria-label="GOYING, tableau de bord voitures">
+            <span class="vehicle-sales-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>DEMANDES AUTOMOBILES</small></span>
+        </a>
+        <nav class="vehicle-sales-nav" aria-label="Navigation des voitures">
+            <a href="/gestion/voitures">Dashboard</a>
+            <a href="/voitures/ventes">Annonces de vente</a>
+            <a href="/voitures/soumissions">Soumissions utilisateurs</a>
+            <a href="/voitures/liste">Parc de location</a>
+            <button type="button" data-purchase-requests-logout>Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="vehicle-sales-hero">
+        <div>
+            <p class="vehicle-sales-kicker">ESPACE DE GESTION · ACHETEURS</p>
+            <h1>Demandes d'achat de véhicules</h1>
+            <p>Gérez les demandes d’achat et mettez les acheteurs en relation avec les vendeurs.</p>
+        </div>
+        <span class="vehicle-sales-hero-mark" aria-hidden="true">⌕</span>
+    </section>
+
+    <section class="vehicle-sales-stats" aria-label="Résumé des demandes">
+        <article><span aria-hidden="true">▤</span><div><small>Total des demandes</small><strong data-purchase-requests-total>—</strong></div></article>
+        <article><span aria-hidden="true">◷</span><div><small>Nouvelles demandes</small><strong data-purchase-requests-new>—</strong></div></article>
+    </section>
+
+    <section class="vehicle-sales-panel" aria-labelledby="purchase-requests-list-title">
+        <div class="vehicle-sales-toolbar">
+            <div>
+                <p class="vehicle-sales-kicker">SUIVI DES ACHETEURS</p>
+                <h2 id="purchase-requests-list-title"><span data-purchase-requests-count>—</span> <span data-purchase-requests-count-label>demande(s)</span></h2>
+            </div>
+            <div class="vehicle-sales-toolbar-actions">
+                <label class="vehicle-sales-search">
+                    <span class="visually-hidden">Rechercher une demande</span>
+                    <span aria-hidden="true">⌕</span>
+                    <input type="search" data-purchase-requests-search placeholder="Marque, acheteur, contact, ville…" autocomplete="off">
+                </label>
+                <button class="vehicle-sales-refresh" type="button" data-purchase-requests-refresh>
+                    <span aria-hidden="true">↻</span><span data-purchase-requests-refresh-label>Actualiser</span>
+                </button>
+            </div>
+        </div>
+        <p class="vehicle-sales-feedback" data-purchase-requests-feedback role="status" aria-live="polite"></p>
+        <div class="vehicle-sales-grid" data-purchase-requests-list aria-live="polite" aria-busy="true">
+            <article class="vehicle-sale-skeleton" aria-hidden="true">
+                <span class="vehicle-sale-skeleton-image"></span><span class="vehicle-sale-skeleton-content"><i></i><i></i><i></i><i></i></span>
+            </article>
+            <article class="vehicle-sale-skeleton" aria-hidden="true">
+                <span class="vehicle-sale-skeleton-image"></span><span class="vehicle-sale-skeleton-content"><i></i><i></i><i></i><i></i></span>
+            </article>
+            <article class="vehicle-sale-skeleton" aria-hidden="true">
+                <span class="vehicle-sale-skeleton-image"></span><span class="vehicle-sale-skeleton-content"><i></i><i></i><i></i><i></i></span>
+            </article>
+        </div>
+    </section>
+</main>
+<dialog class="vehicle-submission-dialog purchase-request-detail-dialog" data-purchase-request-dialog aria-labelledby="purchase-request-dialog-title">
+    <div class="vehicle-submission-dialog-content">
+        <header>
+            <div><p class="vehicle-sales-kicker">DOSSIER DE DEMANDE</p><h2 id="purchase-request-dialog-title" data-purchase-request-dialog-title></h2></div>
+            <button type="button" data-purchase-request-dialog-close aria-label="Fermer les détails">×</button>
+        </header>
+        <div data-purchase-request-dialog-body></div>
+    </div>
+</dialog>
+<dialog class="vehicle-submission-dialog purchase-request-action-dialog" data-purchase-request-action-dialog aria-labelledby="purchase-request-action-title">
+    <div class="vehicle-submission-dialog-content">
+        <header>
+            <div><p class="vehicle-sales-kicker">ACTION ADMINISTRATEUR</p><h2 id="purchase-request-action-title" data-purchase-request-action-title></h2></div>
+            <button type="button" data-purchase-request-action-close aria-label="Fermer">×</button>
+        </header>
+        <div class="purchase-request-action-message" data-purchase-request-action-message></div>
+        <footer class="purchase-request-action-buttons" data-purchase-request-action-buttons></footer>
+    </div>
+</dialog>
+<script src="/static/demandes-achat-voitures.js"></script>
+</body>
+</html>

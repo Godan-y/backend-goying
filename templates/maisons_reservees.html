@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Maisons réservées</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell property-bookings-page" data-reservations-page data-endpoint="/maisons/api/reservations">
+    <header class="property-bookings-topbar">
+        <a class="property-bookings-brand" href="/dashboard/maisons" aria-label="GOYING, tableau de bord immobilier">
+            <span class="property-bookings-brand-mark" aria-hidden="true">G</span>
+            <span><strong>GOYING</strong><small>GESTION IMMOBILIÈRE</small></span>
+        </a>
+        <nav class="property-bookings-nav" aria-label="Navigation immobilière">
+            <a href="/dashboard/maisons">Dashboard</a>
+            <a href="/maisons/disponibles">Maisons disponibles</a>
+            <button class="property-bookings-logout" type="button" id="logout-button">Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="property-bookings-hero" aria-labelledby="property-bookings-title">
+        <div>
+            <p class="property-bookings-eyebrow"><span aria-hidden="true">⌂</span> ESPACE D’ADMINISTRATION</p>
+            <h1 id="property-bookings-title">Maisons réservées</h1>
+            <p>Gérez les demandes de réservation et les visites immobilières.</p>
+        </div>
+        <div class="property-bookings-hero-mark" aria-hidden="true">⌂</div>
+    </section>
+
+    <section class="property-bookings-panel" aria-labelledby="reservations-heading">
+        <div class="property-bookings-toolbar">
+            <div>
+                <p class="property-bookings-eyebrow">SUIVI DES DEMANDES</p>
+                <h2 id="reservations-heading"><span id="reservations-count">—</span><span>réservation(s)</span></h2>
+                <p>Consultez les informations clients et traitez chaque demande.</p>
+            </div>
+            <button type="button" id="refresh-reservations" class="property-bookings-refresh">
+                <span aria-hidden="true">↻</span> Actualiser
+            </button>
+        </div>
+        <div id="reservations-notice" class="reservation-notice" role="status" aria-live="polite" hidden></div>
+        <div id="reservations-list" class="appointments-grid property-bookings-grid" aria-live="polite" aria-busy="true">
+            <div class="reservation-loading"><span class="reservation-spinner" aria-hidden="true"></span><p>Chargement des réservations…</p></div>
+        </div>
+    </section>
+</main>
+
+<dialog id="reservation-confirm-dialog" class="reservation-confirm-dialog" aria-labelledby="reservation-confirm-title">
+    <div class="reservation-dialog-content">
+        <span class="reservation-dialog-icon" aria-hidden="true">!</span>
+        <div>
+            <p class="property-bookings-eyebrow">CONFIRMATION ADMINISTRATEUR</p>
+            <h2 id="reservation-confirm-title">Confirmer l’action</h2>
+            <p id="reservation-confirm-message"></p>
+        </div>
+        <footer>
+            <button type="button" id="cancel-reservation-action" class="reservation-dialog-cancel">Annuler</button>
+            <button type="button" id="confirm-reservation-action" class="reservation-dialog-confirm">Confirmer</button>
+        </footer>
+    </div>
+</dialog>
+<script src="/static/telephone.js"></script>
+<script src="/static/maisons-reservees.js"></script>
+</body>
+</html>

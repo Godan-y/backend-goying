@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goying - Maisons ajoutées</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell added-houses-page" data-added-houses-page data-load-error="{{ 'true' if error else 'false' }}">
+    <header class="topbar">
+        <div>
+            <p class="eyebrow added-houses-brand">GOYING <span>·</span> IMMOBILIER</p>
+            <h1>Maisons ajoutées</h1>
+            <p class="status-text">Gérez les biens immobiliers enregistrés sur la plateforme.</p>
+        </div>
+        <nav class="toplinks" aria-label="Navigation maisons">
+            <a href="/dashboard/maisons">Dashboard</a>
+            <a class="added-houses-add-link" href="/maisons/ajouter">+ Ajouter une maison</a>
+            <button type="button" class="nav-button" id="logout-button">Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="added-houses-stats" aria-label="Statistiques des maisons" aria-live="polite">
+        <article class="added-houses-stat">
+            <span class="added-houses-stat-icon is-total" aria-hidden="true">⌂</span>
+            <div><p>Total des maisons</p><strong id="houses-total">0</strong></div>
+        </article>
+        <article class="added-houses-stat">
+            <span class="added-houses-stat-icon is-available" aria-hidden="true">✓</span>
+            <div><p>Disponibles</p><strong id="houses-available">0</strong></div>
+        </article>
+        <article class="added-houses-stat">
+            <span class="added-houses-stat-icon is-unavailable" aria-hidden="true">—</span>
+            <div><p>Indisponibles</p><strong id="houses-unavailable">0</strong></div>
+        </article>
+        <article class="added-houses-stat">
+            <span class="added-houses-stat-icon is-pending" aria-hidden="true">◷</span>
+            <div><p>En attente</p><strong id="houses-pending">0</strong></div>
+        </article>
+    </section>
+
+    {% if error %}
+    <div class="added-houses-error" role="alert">
+        <p>Impossible de charger les maisons : {{ error }}</p>
+        <button type="button" class="secondary-button" id="retry-houses">Réessayer</button>
+    </div>
+    {% endif %}
+
+    <section class="management-panel added-houses-panel">
+        <div class="added-houses-toolbar">
+            <div>
+                <p class="eyebrow">Votre portefeuille immobilier</p>
+                <h2><span id="houses-visible-count">{{ maisons|length }}</span> bien(s)</h2>
+            </div>
+            <a class="secondary-button added-houses-refresh" href="/maisons" aria-label="Actualiser la liste des maisons">Actualiser</a>
+        </div>
+
+        <div class="added-houses-filters">
+            <label class="added-houses-search">
+                <span aria-hidden="true">⌕</span>
+                <span class="visually-hidden">Rechercher un bien</span>
+                <input id="house-search" type="search" placeholder="Rechercher par titre, localisation ou type">
+            </label>
+            <label>
+                <span class="visually-hidden">Filtrer les maisons</span>
+                <select id="house-status-filter">
+                    <option value="all">Tous les biens</option>
+                    <option value="available">Disponibles</option>
+                    <option value="unavailable">Indisponibles</option>
+                    <option value="pending">En attente</option>
+                    <option value="rent">À louer</option>
+                    <option value="sale">À vendre</option>
+                </select>
+            </label>
+            <label>
+                <span class="visually-hidden">Trier les maisons</span>
+                <select id="house-sort">
+                    <option value="date-desc">Plus récentes</option>
+                    <option value="date-asc">Plus anciennes</option>
+                    <option value="price-asc">Prix croissant</option>
+                    <option value="price-desc">Prix décroissant</option>
+                </select>
+            </label>
+        </div>
+
+        <p id="houses-feedback" class="added-houses-feedback" role="status" aria-live="polite"></p>
+
+        <div id="added-houses-list" class="added-houses-grid">
+            {% for maison in maisons %}
+                {% set current_status = maison.statut or maison.disponibilite or '' %}
+                {% if maison.approuvee and current_status in ['a_vendre', 'a_louer'] %}
+                    {% set current_status = 'disponible' %}
+                {% endif %}
+                {% set is_pending = not maison.approuvee %}
+                {% set is_available = maison.approuvee and current_status == 'disponible' %}
+                {% set photo_urls = maison.photo_urls or ([maison.photo_url] if maison.photo_url else []) %}
+                {% set address_parts = [maison.avenue, maison.quartier, maison.commune] %}
+                {% set transaction_type = maison.type or '' %}
+                {% set property_type = maison.type_maison or maison.type_bien or '' %}
+                <article class="added-house-card"
+                    data-house-card
+                    data-house-id="{{ maison.id }}"
+                    data-approved="{{ 'true' if maison.approuvee else 'false' }}"
+                    data-status="{{ current_status|lower }}"
+                    data-transaction="{{ transaction_type|lower }}"
+                    data-price="{{ maison.prix if maison.prix is not none else '' }}"
+                    data-order="{{ loop.index0 }}"
+                    data-search="{{ [maison.titre, property_type, maison.commune, maison.quartier, maison.avenue, maison.province, maison.pays]|join(' ')|lower }}">
+                    <div class="added-house-gallery" data-house-gallery>
+                        {% if photo_urls %}
+                            {% for photo_url in photo_urls %}
+                                <button type="button" class="added-house-photo{% if loop.first %} is-active{% endif %}"
+                                    data-gallery-photo data-photo-url="{{ photo_url }}"
+                                    {% if not loop.first %}hidden{% endif %}
+                                    aria-label="Ouvrir la photo {{ loop.index }} sur {{ loop.length }}">
+                                    <img src="{{ photo_url }}" alt="Photo {{ loop.index }} de {{ maison.titre or 'la maison' }}" loading="lazy">
+                                </button>
+                            {% endfor %}
+                            <div class="added-house-photo-fallback" aria-hidden="true">Photo indisponible</div>
+                            {% if photo_urls|length > 1 %}
+                                <button type="button" class="added-house-gallery-arrow is-previous" data-gallery-direction="-1" aria-label="Photo précédente">‹</button>
+                                <button type="button" class="added-house-gallery-arrow is-next" data-gallery-direction="1" aria-label="Photo suivante">›</button>
+                                <span class="added-house-photo-count" data-photo-count>1 / {{ photo_urls|length }}</span>
+                            {% endif %}
+                        {% else %}
+                            <div class="added-house-photo-fallback is-visible">Aucune photo disponible</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="added-house-content">
+                        <div class="added-house-heading">
+                            <div>
+                                <p class="eyebrow">{{ property_type or 'Bien immobilier' }}</p>
+                                <h2>{{ maison.titre or 'Bien sans titre' }}</h2>
+                            </div>
+                            <span class="added-house-status{% if is_pending %} is-pending{% elif is_available %} is-available{% else %} is-unavailable{% endif %}" data-house-status-label>
+                                {% if is_pending %}En attente{% elif is_available %}Disponible{% else %}Indisponible{% endif %}
+                            </span>
+                        </div>
+
+                        {% if maison.prix is not none %}
+                            <p class="added-house-price">{{ maison.prix }}{% if maison.devise or maison.currency %} {{ maison.devise or maison.currency }}{% endif %}<span>{% if transaction_type == 'a_louer' %} / location{% elif transaction_type == 'a_vendre' %} / vente{% endif %}</span></p>
+                        {% endif %}
+
+                        {% if address_parts|select|list %}
+                            <p class="added-house-location"><span aria-hidden="true">⌖</span>{{ address_parts|select|join(', ') }}</p>
+                        {% endif %}
+
+                        <div class="added-house-facts">
+                            {% if maison.chambres is not none %}<p><span aria-hidden="true">▦</span><span><small>Chambres</small><strong>{{ maison.chambres }}</strong></span></p>{% endif %}
+                            {% if maison.salles_bains is not none %}<p><span aria-hidden="true">◌</span><span><small>Salles de bains</small><strong>{{ maison.salles_bains }}</strong></span></p>{% endif %}
+                            {% if maison.superficie %}<p><span aria-hidden="true">□</span><span><small>Superficie</small><strong>{{ maison.superficie }}</strong></span></p>{% endif %}
+                            {% if maison.createdAt %}
+                                <p><span aria-hidden="true">◷</span><span><small>Ajoutée le</small><strong>{{ maison.createdAt.strftime('%d/%m/%Y') if maison.createdAt.strftime is defined else maison.createdAt }}</strong></span></p>
+                            {% endif %}
+                        </div>
+
+                        {% if maison.description %}
+                            <div class="added-house-description">
+                                <h3>Description</h3>
+                                <p>{{ maison.description }}</p>
+                            </div>
+                        {% endif %}
+
+                        {% if maison.informations_complementaires %}
+                            <div class="added-house-extra">
+                                <h3>Informations complémentaires</h3>
+                                <p data-expandable-text>{{ maison.informations_complementaires }}</p>
+                                <button type="button" class="added-house-more" data-expand-text>Voir plus</button>
+                            </div>
+                        {% endif %}
+
+                        {% if maison.informations_personnalisees %}
+                            <dl class="added-house-custom-info">
+                                {% for information in maison.informations_personnalisees %}
+                                    {% if information.nom or information.valeur %}
+                                        <div><dt>{{ information.nom or 'Information' }}</dt><dd>{{ information.valeur or 'Non précisé' }}</dd></div>
+                                    {% endif %}
+                                {% endfor %}
+                            </dl>
+                        {% endif %}
+
+                        <div class="added-house-actions" data-house-actions>
+                            {% if not maison.approuvee %}
+                                <form action="/api/maisons/{{ maison.id }}/approuver" method="POST">
+                                    <button type="submit" class="status-button" data-house-status-action>Approuver le bien</button>
+                                </form>
+                            {% elif is_available %}
+                                <form action="/api/maisons/{{ maison.id }}/indisponible" method="POST">
+                                    <button type="submit" class="status-button" data-house-status-action>Rendre indisponible</button>
+                                </form>
+                            {% else %}
+                                <form action="/api/maisons/{{ maison.id }}/disponible" method="POST">
+                                    <button type="submit" class="status-button" data-house-status-action>Rendre disponible</button>
+                                </form>
+                            {% endif %}
+                            <a class="secondary-button" href="/maisons/{{ maison.id }}/modifier">Modifier</a>
+                            <button type="button" class="added-house-delete" data-house-delete data-house-title="{{ maison.titre or 'ce bien immobilier' }}">Supprimer</button>
+                        </div>
+                    </div>
+                </article>
+            {% else %}
+                {% if not error %}
+                <div class="added-houses-empty" data-empty-state>
+                    <span aria-hidden="true">⌂</span>
+                    <h2>Aucune maison enregistrée pour le moment</h2>
+                    <p>Ajoutez votre premier bien pour commencer à gérer votre portefeuille immobilier.</p>
+                    <a class="added-houses-add-link" href="/maisons/ajouter">+ Ajouter une maison</a>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div class="added-houses-no-results" id="houses-no-results" hidden>
+            <h2>Aucun bien ne correspond à votre recherche</h2>
+            <p>Modifiez votre recherche ou vos filtres pour afficher des maisons.</p>
+        </div>
+    </section>
+</main>
+
+<dialog class="house-confirm-dialog" id="house-delete-dialog" aria-labelledby="house-delete-title">
+    <form method="dialog" class="house-confirm-content">
+        <span class="house-confirm-icon" aria-hidden="true">!</span>
+        <h2 id="house-delete-title">Confirmer la suppression</h2>
+        <p>Voulez-vous vraiment supprimer <strong id="house-delete-name">ce bien</strong> ? Cette action peut être définitive.</p>
+        <div class="house-confirm-actions">
+            <button type="submit" class="secondary-button" value="cancel">Annuler</button>
+            <button type="button" class="added-house-delete" id="confirm-house-delete">Confirmer la suppression</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog class="house-photo-dialog" id="house-photo-dialog" aria-label="Agrandissement de la photo">
+    <button type="button" class="house-photo-close" data-close-photo aria-label="Fermer">×</button>
+    <img id="house-photo-dialog-image" src="" alt="Photo agrandie de la maison">
+    <p id="house-photo-dialog-caption"></p>
+</dialog>
+<script src="/static/maisons-ajoutees.js"></script>
+</body>
+</html>

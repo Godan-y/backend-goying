@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Soumissions de véhicules</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell vehicle-sales-page" data-vehicle-submissions-page data-endpoint="/api/voitures/soumissions">
+    <header class="vehicle-sales-header">
+        <a class="vehicle-sales-brand" href="/gestion/voitures" aria-label="GOYING, tableau de bord voitures">
+            <span class="vehicle-sales-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>PROPOSITIONS AUTOMOBILES</small></span>
+        </a>
+        <nav class="vehicle-sales-nav" aria-label="Navigation des voitures">
+            <a href="/gestion/voitures">Dashboard</a>
+            <a href="/voitures/ventes">Annonces de vente</a>
+            <a href="/voitures/demandes-achat">Demandes d'achat</a>
+            <a href="/voitures/liste">Parc de location</a>
+            <button type="button" data-vehicle-submissions-logout>Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="vehicle-sales-hero">
+        <div>
+            <p class="vehicle-sales-kicker">CENTRE DE VALIDATION · VÉHICULES</p>
+            <h1>Propositions des propriétaires</h1>
+            <p>Examinez et gérez les véhicules proposés par les propriétaires.</p>
+        </div>
+        <span class="vehicle-sales-hero-mark" aria-hidden="true">▤</span>
+    </section>
+
+    <section class="vehicle-sales-stats" aria-label="Résumé des soumissions">
+        <article><span aria-hidden="true">▤</span><div><small>Total</small><strong data-vehicle-submissions-total>—</strong></div></article>
+        <article><span aria-hidden="true">◷</span><div><small>En attente</small><strong data-vehicle-submissions-pending>—</strong></div></article>
+        <article><span aria-hidden="true">✓</span><div><small>Approuvées</small><strong data-vehicle-submissions-approved>—</strong></div></article>
+        <article><span aria-hidden="true">×</span><div><small>Refusées</small><strong data-vehicle-submissions-rejected>—</strong></div></article>
+        <article><span aria-hidden="true">↗</span><div><small>Traitées</small><strong data-vehicle-submissions-processed>—</strong></div></article>
+    </section>
+
+    <section class="vehicle-sales-panel" aria-labelledby="vehicle-submissions-list-title">
+        <div class="vehicle-sales-toolbar">
+            <div>
+                <p class="vehicle-sales-kicker">SUIVI DES PROPOSITIONS</p>
+                <h2 id="vehicle-submissions-list-title"><span data-vehicle-submissions-count>—</span> <span data-vehicle-submissions-count-label>propositions</span></h2>
+            </div>
+            <div class="vehicle-sales-toolbar-actions">
+                <label class="vehicle-sales-search">
+                    <span class="visually-hidden">Rechercher une proposition</span>
+                    <span aria-hidden="true">⌕</span>
+                    <input type="search" data-vehicle-submissions-search placeholder="Rechercher une proposition…" autocomplete="off">
+                </label>
+                <label class="vehicle-submissions-status-filter">
+                    <span class="visually-hidden">Filtrer par statut</span>
+                    <select data-vehicle-submissions-status-filter>
+                        <option value="">Tous les statuts</option>
+                    </select>
+                </label>
+                <button class="vehicle-sales-refresh" type="button" data-vehicle-submissions-refresh>
+                    <span aria-hidden="true">↻</span><span data-vehicle-submissions-refresh-label>Actualiser</span>
+                </button>
+            </div>
+        </div>
+        <p class="vehicle-sales-feedback" data-vehicle-submissions-feedback role="status" aria-live="polite"></p>
+        <div class="vehicle-sales-grid" data-vehicle-submissions-list aria-live="polite" aria-busy="true">
+            <article class="vehicle-sale-skeleton" aria-hidden="true">
+                <span class="vehicle-sale-skeleton-image"></span><span class="vehicle-sale-skeleton-content"><i class="is-title"></i><i class="is-price"></i><i class="is-features"></i><i class="is-location"></i><i class="is-owner"></i><i class="is-actions"></i></span>
+            </article>
+            <article class="vehicle-sale-skeleton" aria-hidden="true">
+                <span class="vehicle-sale-skeleton-image"></span><span class="vehicle-sale-skeleton-content"><i class="is-title"></i><i class="is-price"></i><i class="is-features"></i><i class="is-location"></i><i class="is-owner"></i><i class="is-actions"></i></span>
+            </article>
+            <article class="vehicle-sale-skeleton" aria-hidden="true">
+                <span class="vehicle-sale-skeleton-image"></span><span class="vehicle-sale-skeleton-content"><i class="is-title"></i><i class="is-price"></i><i class="is-features"></i><i class="is-location"></i><i class="is-owner"></i><i class="is-actions"></i></span>
+            </article>
+        </div>
+    </section>
+</main>
+<dialog class="vehicle-submission-dialog" data-vehicle-submission-dialog aria-labelledby="vehicle-submission-dialog-title">
+    <div class="vehicle-submission-dialog-content">
+        <header>
+            <div><p class="vehicle-sales-kicker">DOSSIER DE SOUMISSION</p><h2 id="vehicle-submission-dialog-title" data-vehicle-submission-dialog-title></h2></div>
+            <button type="button" data-vehicle-submission-dialog-close aria-label="Fermer les détails">×</button>
+        </header>
+        <div data-vehicle-submission-dialog-body></div>
+    </div>
+</dialog>
+<script src="/static/soumissions-voitures.js"></script>
+</body>
+</html>

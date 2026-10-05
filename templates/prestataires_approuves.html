@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Prestataires approuvés</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell approved-providers-page" data-approved-providers-page
+    data-endpoint="/prestataires/api/approuves">
+    <header class="approved-providers-header">
+        <a class="approved-providers-brand" href="/" aria-label="GOYING, accueil">
+            <span class="approved-providers-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>GESTION DES SERVICES</small></span>
+        </a>
+        <nav class="approved-providers-nav" aria-label="Navigation prestataires">
+            <a href="/gestion/prestataires">Dashboard</a>
+            <a href="/prestataires/en-attente">Demandes</a>
+            <a href="/prestataires/refuses">Refusés</a>
+            <button type="button" data-provider-logout>Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="approved-providers-hero">
+        <div>
+            <p class="approved-providers-kicker">ANNUAIRE PROFESSIONNEL</p>
+            <h1>Prestataires approuvés</h1>
+            <p>Prestataires autorisés à exercer sur la plateforme</p>
+        </div>
+        <div class="approved-providers-hero-icon" aria-hidden="true">✓</div>
+    </section>
+
+    <section class="approved-providers-stats" aria-label="Statistiques des prestataires approuvés" aria-live="polite">
+        <article class="approved-provider-stat is-total">
+            <span aria-hidden="true">♙</span>
+            <div><small>Total approuvés</small><strong data-provider-stat="total">—</strong></div>
+        </article>
+        <article class="approved-provider-stat is-driver">
+            <span aria-hidden="true">▰</span>
+            <div><small>Chauffeurs</small><strong data-provider-stat="drivers">—</strong></div>
+        </article>
+        <article class="approved-provider-stat is-housekeeper">
+            <span aria-hidden="true">⌂</span>
+            <div><small>Ménagères</small><strong data-provider-stat="housekeepers">—</strong></div>
+        </article>
+        <article class="approved-provider-stat is-available">
+            <span aria-hidden="true">✓</span>
+            <div><small>Disponibles</small><strong data-provider-stat="available">—</strong></div>
+        </article>
+        <article class="approved-provider-stat is-unavailable">
+            <span aria-hidden="true">—</span>
+            <div><small>Indisponibles</small><strong data-provider-stat="unavailable">—</strong></div>
+        </article>
+    </section>
+
+    <section class="approved-providers-panel">
+        <div class="approved-providers-toolbar">
+            <div>
+                <p class="approved-providers-kicker">PROFILS VALIDÉS</p>
+                <h2><span data-provider-visible-count>0</span> prestataire(s)</h2>
+                <p data-provider-result-summary>Chargement des profils approuvés…</p>
+            </div>
+            <button type="button" class="approved-providers-refresh" data-provider-refresh>
+                <span aria-hidden="true">↻</span> <span data-refresh-label>Actualiser</span>
+            </button>
+        </div>
+
+        <div class="approved-providers-filters">
+            <label class="approved-provider-search">
+                <span aria-hidden="true">⌕</span>
+                <span class="visually-hidden">Rechercher un prestataire</span>
+                <input type="search" data-provider-search placeholder="Nom, service, téléphone ou localisation…" autocomplete="off">
+            </label>
+            <label>
+                <span class="visually-hidden">Filtrer par catégorie</span>
+                <select data-provider-category>
+                    <option value="">Toutes les catégories</option>
+                </select>
+            </label>
+            <label>
+                <span class="visually-hidden">Filtrer par disponibilité</span>
+                <select data-provider-availability>
+                    <option value="all">Toutes les disponibilités</option>
+                    <option value="available">Disponibles</option>
+                    <option value="unavailable">Indisponibles</option>
+                    <option value="reserved" data-reserved-option hidden>Réservés</option>
+                    <option value="other" data-other-option hidden>Autre statut</option>
+                </select>
+            </label>
+            <label>
+                <span class="visually-hidden">Trier les prestataires</span>
+                <select data-provider-sort>
+                    <option value="name-asc">Nom : A à Z</option>
+                    <option value="name-desc">Nom : Z à A</option>
+                    <option value="date-desc">Inscription : plus récente</option>
+                    <option value="date-asc">Inscription : plus ancienne</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="approved-providers-feedback" data-provider-feedback role="status" aria-live="polite"></div>
+        <div class="approved-providers-error" data-provider-error role="alert" hidden>
+            <p data-provider-error-message></p>
+            <button type="button" data-provider-retry>Réessayer</button>
+        </div>
+        <div class="approved-providers-grid" data-provider-list aria-live="polite">
+            <div class="approved-provider-loading"><span></span>Chargement des prestataires…</div>
+        </div>
+        <div class="approved-providers-empty" data-provider-empty hidden>
+            <span aria-hidden="true">♙</span>
+            <h2>Aucun prestataire approuvé</h2>
+            <p>Les profils validés par l'administration apparaîtront ici.</p>
+        </div>
+        <div class="approved-providers-empty" data-provider-no-results hidden>
+            <span aria-hidden="true">⌕</span>
+            <h2>Aucun résultat</h2>
+            <p>Essayez de modifier votre recherche ou vos filtres.</p>
+        </div>
+    </section>
+</main>
+
+<dialog class="approved-provider-delete-dialog" data-provider-delete-dialog aria-labelledby="provider-delete-heading">
+    <form method="dialog">
+        <span class="approved-provider-delete-icon" aria-hidden="true">!</span>
+        <h2 id="provider-delete-heading">Supprimer ce prestataire ?</h2>
+        <p>La suppression de <strong data-provider-delete-name></strong> peut être définitive. Les photos ne seront pas supprimées automatiquement.</p>
+        <p class="approved-provider-delete-error" data-provider-delete-error role="alert" hidden></p>
+        <div>
+            <button type="submit" value="cancel">Annuler</button>
+            <button type="button" data-provider-confirm-delete>Confirmer la suppression</button>
+        </div>
+    </form>
+</dialog>
+<script src="/static/prestataires-approuves.js"></script>
+</body>
+</html>

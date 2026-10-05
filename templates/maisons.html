@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Gestion des maisons</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell house-dashboard" data-house-dashboard
+      data-dashboard-url="/dashboard/maisons/data"
+      data-overview-url="/maisons/api/dashboard">
+    <header class="house-dashboard-header">
+        <a class="house-dashboard-brand" href="/dashboard/maisons" aria-label="GOYING, dashboard maisons">
+            <span class="house-dashboard-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>GESTION IMMOBILIÈRE</small></span>
+        </a>
+        <nav class="house-dashboard-nav" aria-label="Navigation maisons">
+            <a href="/" class="house-nav-home">Accueil</a>
+            <span class="house-dashboard-active"><i aria-hidden="true"></i> Espace actif</span>
+            <button type="button" data-house-logout>Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="house-dashboard-hero">
+        <div>
+            <p class="house-dashboard-kicker">ESPACE DE GESTION · IMMOBILIER</p>
+            <h1>Gestion des maisons</h1>
+            <p>Tableau de bord de gestion immobilière</p>
+        </div>
+        <a class="house-dashboard-primary" href="/maisons/ajouter">
+            <span aria-hidden="true">＋</span> Ajouter une maison
+        </a>
+    </section>
+
+    <div class="house-dashboard-error" data-house-error role="alert" hidden>
+        <div><strong>Impossible de charger les données.</strong><p data-house-error-message>Vérifiez votre connexion puis réessayez.</p></div>
+        <button type="button" data-house-retry>Réessayer</button>
+    </div>
+
+    <section class="house-dashboard-stats" aria-label="Statistiques immobilières" aria-live="polite">
+        <article class="house-stat-card is-total">
+            <span class="house-stat-icon" aria-hidden="true">⌂</span>
+            <div><small>Maisons ajoutées</small><strong data-house-stat="total">—</strong><p>Total des maisons enregistrées</p></div>
+        </article>
+        <article class="house-stat-card is-approved">
+            <span class="house-stat-icon" aria-hidden="true">✓</span>
+            <div><small>Maisons approuvées</small><strong data-house-stat="approuvees">—</strong><p>Biens validés par l'administration</p></div>
+        </article>
+        <article class="house-stat-card is-available">
+            <span class="house-stat-icon" aria-hidden="true">⌑</span>
+            <div><small>Maisons disponibles</small><strong data-house-stat="disponibles">—</strong><p>Selon le statut existant du bien</p></div>
+        </article>
+        <article class="house-stat-card is-taken">
+            <span class="house-stat-icon" aria-hidden="true">—</span>
+            <div><small>Indisponibles / prises</small><strong data-house-stat="prises">—</strong><p>Un statut indisponible ne confirme pas une vente ou location</p></div>
+        </article>
+        <article class="house-stat-card is-reserved">
+            <span class="house-stat-icon" aria-hidden="true">⌖</span>
+            <div><small>Maisons réservées</small><strong data-house-stat="reservees">—</strong><p>Biens liés à une réservation approuvée</p></div>
+        </article>
+        <article class="house-stat-card is-submitted">
+            <span class="house-stat-icon" aria-hidden="true">▤</span>
+            <div><small>Maisons soumises</small><strong data-house-stat="soumises">—</strong><p>Propositions dans la collection dédiée</p></div>
+        </article>
+    </section>
+
+    <section class="house-dashboard-section">
+        <div class="house-dashboard-section-heading">
+            <div>
+                <p class="house-dashboard-kicker">PARC IMMOBILIER</p>
+                <h2>Gestion des maisons</h2>
+                <p>Accédez aux biens et suivez leur état réel dans la plateforme.</p>
+            </div>
+        </div>
+        <div class="house-management-grid">
+            <a class="house-management-card is-highlight" href="/maisons/ajouter">
+                <span class="house-card-icon is-yellow" aria-hidden="true">＋</span>
+                <span class="house-card-copy"><strong>Ajouter une nouvelle maison</strong><small>Enregistrer un nouveau bien immobilier sur la plateforme.</small><b>Ajouter une maison</b></span>
+                <span class="house-card-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="house-management-card" href="/maisons">
+                <span class="house-card-icon" aria-hidden="true">⌂</span>
+                <span class="house-card-copy"><strong>Maisons ajoutées</strong><small>Consulter et gérer tous les biens immobiliers enregistrés.</small><b><span data-house-shortcut="total">—</span> maison(s)</b></span>
+                <span class="house-card-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="house-management-card" href="/maisons/approuvees">
+                <span class="house-card-icon is-green" aria-hidden="true">✓</span>
+                <span class="house-card-copy"><strong>Maisons approuvées</strong><small>Consulter les biens validés par l'administration.</small><b><span data-house-shortcut="approuvees">—</span> maison(s)</b><small class="house-empty-hint" data-house-empty="approuvees" hidden>Aucune maison approuvée pour le moment.</small></span>
+                <span class="house-card-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="house-management-card" href="/maisons/disponibles">
+                <span class="house-card-icon is-blue" aria-hidden="true">⌑</span>
+                <span class="house-card-copy"><strong>Maisons disponibles</strong><small>Consulter les biens à la vente ou à la location disponibles.</small><b><span data-house-shortcut="disponibles">—</span> maison(s)</b><small class="house-empty-hint" data-house-empty="disponibles" hidden>Aucune maison disponible pour le moment.</small></span>
+                <span class="house-card-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="house-management-card" href="/maisons/prises">
+                <span class="house-card-icon is-gray" aria-hidden="true">—</span>
+                <span class="house-card-copy"><strong>Maisons prises / indisponibles</strong><small>Consulter les biens présents dans la liste existante des maisons prises.</small><b><span data-house-shortcut="prises">—</span> maison(s)</b></span>
+                <span class="house-card-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="house-management-card" href="/maisons/reservees">
+                <span class="house-card-icon is-violet" aria-hidden="true">⌖</span>
+                <span class="house-card-copy"><strong>Maisons réservées</strong><small>Consulter les demandes et réservations immobilières.</small><b><span data-house-shortcut="reservees">—</span> bien(s) lié(s) à une réservation approuvée</b></span>
+                <span class="house-card-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="house-management-card" href="/maisons/soumises">
+                <span class="house-card-icon is-orange" aria-hidden="true">▤</span>
+                <span class="house-card-copy"><strong>Maisons soumises</strong><small>Consulter les biens proposés par les utilisateurs et gérer leur validation.</small><b><span data-house-shortcut="soumises">—</span> soumission(s)</b></span>
+                <span class="house-card-arrow" aria-hidden="true">→</span>
+            </a>
+        </div>
+    </section>
+
+    <section class="house-dashboard-section">
+        <div class="house-dashboard-section-heading">
+            <div>
+                <p class="house-dashboard-kicker">ACCÈS RAPIDE</p>
+                <h2>Actions rapides</h2>
+                <p>Raccourcis vers les opérations immobilières les plus utilisées.</p>
+            </div>
+        </div>
+        <div class="house-quick-actions">
+            <a href="/maisons/ajouter"><span aria-hidden="true">＋</span> Ajouter une maison</a>
+            <a href="/maisons"><span aria-hidden="true">⌂</span> Voir toutes les maisons</a>
+            <a href="/maisons/approuvees"><span aria-hidden="true">✓</span> Maisons approuvées</a>
+            <a href="/maisons/disponibles"><span aria-hidden="true">⌑</span> Disponibilités</a>
+            <a href="/maisons/reservees"><span aria-hidden="true">⌖</span> Réservations</a>
+            <a href="/maisons/prises"><span aria-hidden="true">—</span> Maisons prises</a>
+        </div>
+    </section>
+
+    <section class="house-dashboard-section house-dashboard-activity">
+        <div class="house-dashboard-section-heading house-activity-heading">
+            <div>
+                <p class="house-dashboard-kicker">ACTIVITÉ RÉCENTE</p>
+                <h2>Maisons et réservations récentes</h2>
+                <p>Aperçu des informations disponibles pour votre espace de gestion.</p>
+            </div>
+            <button type="button" class="house-dashboard-refresh" data-house-refresh><span aria-hidden="true">↻</span> Actualiser</button>
+        </div>
+        <div class="house-preview-columns">
+            <section class="house-preview-panel" aria-labelledby="recent-houses-heading">
+                <div class="house-preview-panel-heading"><h3 id="recent-houses-heading">Maisons récemment ajoutées</h3><a href="/maisons">Voir toutes les maisons →</a></div>
+                <div class="house-preview-list" data-recent-houses><div class="house-preview-loading">Chargement des maisons…</div></div>
+            </section>
+            <section class="house-preview-panel" aria-labelledby="recent-bookings-heading">
+                <div class="house-preview-panel-heading"><h3 id="recent-bookings-heading">Réservations récentes</h3><a href="/maisons/reservees">Voir les réservations →</a></div>
+                <div class="house-preview-list" data-recent-bookings><div class="house-preview-loading">Chargement des réservations…</div></div>
+            </section>
+        </div>
+    </section>
+</main>
+<script src="/static/maisons-dashboard.js"></script>
+</body>
+</html>

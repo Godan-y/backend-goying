@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Nouveau prestataire</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    {% set is_housekeeper = type_prestataire == "menagere" %}
+    <main class="shell provider-form-page" data-provider-form data-provider-type="{{ type_prestataire }}">
+        <header class="provider-form-header">
+            <a class="provider-form-brand" href="/gestion/prestataires" aria-label="GOYING, dashboard prestataires">
+                <span class="provider-form-brand-mark" aria-hidden="true">G</span>
+                <span>GOYING<small>GESTION DES SERVICES</small></span>
+            </a>
+            <nav class="provider-form-nav" aria-label="Navigation prestataires">
+                <a href="/gestion/prestataires">Dashboard</a>
+                <a href="/prestataires/ajouter?type={{ 'chauffeur' if is_housekeeper else 'menagere' }}">Changer de métier</a>
+                <button type="button" id="logout-button">Déconnexion</button>
+            </nav>
+        </header>
+
+        <section class="provider-form-hero">
+            <p class="provider-form-eyebrow">ESPACE DE GESTION · PRESTATAIRES</p>
+            <h1>Nouveau prestataire</h1>
+            <p>{{ "Ajoutez une ménagère à votre réseau de professionnels." if is_housekeeper else "Ajoutez un chauffeur à votre réseau de professionnels." }}</p>
+        </section>
+
+        <section class="provider-form-panel" aria-labelledby="provider-form-title">
+            <div class="provider-form-intro">
+                <span class="provider-form-icon" aria-hidden="true">{{ "⌂" if is_housekeeper else "↗" }}</span>
+                <div>
+                    <p class="provider-form-eyebrow">NOUVEAU PROFIL</p>
+                    <h2 id="provider-form-title">Ajouter {{ "une ménagère" if is_housekeeper else "un chauffeur" }}</h2>
+                    <p>Les champs marqués d’un astérisque sont obligatoires.</p>
+                </div>
+            </div>
+
+            <form id="provider-form" class="provider-form" novalidate>
+                <fieldset class="provider-form-section">
+                    <legend><span>01</span> Identité et coordonnées</legend>
+                    <div class="provider-form-fields">
+                        <div class="provider-form-field">
+                            <label for="nom">Nom <span class="required-label">*</span></label>
+                            <input id="nom" name="nom" type="text" required autocomplete="family-name">
+                        </div>
+                        <div class="provider-form-field">
+                            <label for="post_nom">Post-nom</label>
+                            <input id="post_nom" name="post_nom" type="text" autocomplete="additional-name">
+                        </div>
+                        <div class="provider-form-field">
+                            <label for="prenom">Prénom <span class="required-label">*</span></label>
+                            <input id="prenom" name="prenom" type="text" required autocomplete="given-name">
+                        </div>
+
+                        <div class="provider-form-field is-wide">
+                            <label for="telephone-local">Téléphone / WhatsApp <span class="required-label">*</span></label>
+                            <div class="provider-phone-input">
+                                <label class="provider-phone-code-label" for="phone-country-code">
+                                    <span class="provider-form-sr-only">Indicatif téléphonique</span>
+                                    <select id="phone-country-code" aria-label="Indicatif téléphonique" data-phone-code>
+                                        <option value="CD" data-calling-code="243">RDC +243</option>
+                                        <option value="CI" data-calling-code="225">Côte d’Ivoire +225</option>
+                                        <option value="SN" data-calling-code="221">Sénégal +221</option>
+                                        <option value="CM" data-calling-code="237">Cameroun +237</option>
+                                        <option value="FR" data-calling-code="33">France +33</option>
+                                    </select>
+                                </label>
+                                <input id="telephone-local" type="tel" inputmode="tel" required autocomplete="tel-national"
+                                       placeholder="857 068 014" aria-describedby="phone-preview phone-error" data-phone-local>
+                            </div>
+                            <input name="telephone" type="hidden" data-phone-normalized>
+                            <input name="indicatif_telephone" type="hidden" data-phone-calling-code>
+                            <input name="region_telephone" type="hidden" data-phone-region>
+                            <p class="provider-phone-preview" id="phone-preview" aria-live="polite" data-phone-preview>Sélectionnez un indicatif et saisissez le numéro.</p>
+                            <p class="provider-field-error" id="phone-error" role="alert" hidden data-phone-error></p>
+                        </div>
+
+                        <div class="provider-form-field">
+                            <label for="pays">Pays d’activité <span class="required-label">*</span></label>
+                            <select id="pays" name="pays" required data-provider-country>
+                                <option value="">Sélectionner un pays</option>
+                                <option>République démocratique du Congo</option>
+                                <option>Côte d'Ivoire</option>
+                                <option>Sénégal</option>
+                                <option>Cameroun</option>
+                                <option>France</option>
+                            </select>
+                        </div>
+                        <div class="provider-form-field">
+                            <label for="ville">Ville d’activité <span class="required-label">*</span></label>
+                            <select id="ville" name="ville" required>
+                                <option value="">Sélectionner une ville</option>
+                                <option>Kinshasa (RDC)</option>
+                                <option>Lubumbashi (RDC)</option>
+                                <option>Goma (RDC)</option>
+                                <option>Kolwezi (RDC)</option>
+                                <option>Matadi (RDC)</option>
+                                <option>Bukavu (RDC)</option>
+                                <option>Abidjan (Côte d'Ivoire)</option>
+                                <option>Dakar (Sénégal)</option>
+                                <option>Douala (Cameroun)</option>
+                                <option>Paris (France)</option>
+                            </select>
+                        </div>
+                        <div class="provider-form-field">
+                            <label for="commune">Commune <span class="required-label">*</span></label>
+                            <input id="commune" name="commune" type="text" required autocomplete="address-level3">
+                        </div>
+                        <div class="provider-form-field">
+                            <label for="annees_experience">Années d’expérience</label>
+                            <input id="annees_experience" name="annees_experience" type="number" min="0" step="1" inputmode="numeric">
+                        </div>
+                        <div class="provider-form-field is-wide">
+                            <label for="description">Présentation / bio courte</label>
+                            <textarea id="description" name="description" rows="3" placeholder="Présentez brièvement le profil et l’expérience du prestataire."></textarea>
+                        </div>
+                    </div>
+                </fieldset>
+
+                {% if is_housekeeper %}
+                <fieldset class="provider-form-section">
+                    <legend><span>02</span> Compétences et tarif</legend>
+                    <div class="provider-form-fields">
+                        <div class="provider-form-field is-wide">
+                            <label for="competences">Compétences spéciales</label>
+                            <input id="competences" name="competences" type="text" placeholder="Repassage, cuisine, nettoyage">
+                            <small>Séparez les compétences par des virgules.</small>
+                        </div>
+                        <div class="provider-form-field">
+                            <label for="tarif_mensuel">Tarif mensuel demandé (USD)</label>
+                            <input id="tarif_mensuel" name="tarif_mensuel" type="number" min="0" step="0.01" inputmode="decimal">
+                        </div>
+                        <div class="provider-form-field provider-checkbox-field">
+                            <label class="checkbox-label" for="prix_negociable">
+                                <input id="prix_negociable" name="prix_negociable" type="checkbox">
+                                <span>Prix négociable avec le client</span>
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+                {% else %}
+                <fieldset class="provider-form-section">
+                    <legend><span>02</span> Documents, services et véhicule</legend>
+                    <div class="provider-form-fields">
+                        <div class="provider-form-field is-wide">
+                            <label for="permis_conduire">Numéro de permis de conduire <span class="required-label">*</span></label>
+                            <input id="permis_conduire" name="permis_conduire" type="text" required autocomplete="off">
+                        </div>
+                        <div class="provider-form-field">
+                            <label for="type_service">Type de service</label>
+                            <select id="type_service" name="type_service">
+                                <option>Chauffeur privé</option>
+                                <option>Taxi</option>
+                                <option>Chauffeur privé et taxi</option>
+                            </select>
+                        </div>
+                        <div class="provider-form-field">
+                            <label for="transmission">Transmission</label>
+                            <select id="transmission" name="transmission">
+                                <option>Automatique</option>
+                                <option>Manuelle</option>
+                                <option>Automatique et manuelle</option>
+                            </select>
+                        </div>
+                        <div class="provider-form-field is-wide">
+                            <label for="modele_vehicule">Modèle du véhicule</label>
+                            <input id="modele_vehicule" name="modele_vehicule" type="text" placeholder="Marque et modèle">
+                        </div>
+                        <div class="provider-form-field is-wide">
+                            <label for="competences">Compétences ou services complémentaires</label>
+                            <input id="competences" name="competences" type="text" placeholder="Conduite longue distance, accueil, livraison">
+                            <small>Facultatif. Séparez les éléments par des virgules.</small>
+                        </div>
+                        <div class="provider-form-field">
+                            <label for="tarif_mensuel">Tarif mensuel souhaité (USD)</label>
+                            <input id="tarif_mensuel" name="tarif_mensuel" type="number" min="0" step="0.01" inputmode="decimal">
+                        </div>
+                        <div class="provider-form-field provider-checkbox-field">
+                            <label class="checkbox-label" for="prix_negociable">
+                                <input id="prix_negociable" name="prix_negociable" type="checkbox">
+                                <span>Prix négociable avec le client</span>
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+                {% endif %}
+
+                <div id="form-status" class="provider-form-message" role="status" aria-live="polite"></div>
+                <button type="submit" class="provider-form-submit" data-provider-submit>
+                    {{ "Ajouter la ménagère" if is_housekeeper else "Ajouter le chauffeur" }}
+                </button>
+            </form>
+        </section>
+    </main>
+    <script src="/static/prestataire-form.js"></script>
+</body>
+</html>

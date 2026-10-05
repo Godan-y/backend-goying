@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goying - Console gestionnaires</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <main class="shell home-shell">
+        <header class="topbar home-topbar">
+            <div class="brand-lockup">
+                <span class="brand-mark" aria-hidden="true">G</span>
+                <div>
+                    <p class="eyebrow">Goying</p>
+                    <h1>Console gestionnaires</h1>
+                </div>
+            </div>
+        </header>
+
+        <section class="home-intro" aria-labelledby="home-heading">
+            <div>
+                <p class="eyebrow">Espace d’administration</p>
+                <h2 id="home-heading">Pilotez chaque service depuis une console unique.</h2>
+                <p>Accédez à votre espace sécurisé pour gérer les biens, les prestataires, les véhicules et les demandes associées.</p>
+            </div>
+            <div class="home-intro-note">
+                <span class="security-mark" aria-hidden="true">✓</span>
+                <p>Accès protégé par rôle</p>
+            </div>
+        </section>
+
+        <section class="workspace" aria-label="Espaces de gestion">
+            <article class="service-card service-card-housing">
+                <span class="service-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z" />
+                    </svg>
+                </span>
+                <div class="service-card-content">
+                    <p class="card-kicker">Immobilier</p>
+                    <h2>Maisons</h2>
+                    <p>Valider les maisons, suivre les demandes et organiser les statuts.</p>
+                </div>
+                <button class="service-action" type="button" data-role="maisons" data-label="Gestionnaire de maisons" aria-haspopup="dialog">
+                    Se connecter
+                </button>
+            </article>
+
+            <article class="service-card service-card-providers">
+                <span class="service-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 21a8 8 0 0 1 16 0" />
+                    </svg>
+                </span>
+                <div class="service-card-content">
+                    <p class="card-kicker">Services</p>
+                    <h2>Prestataires</h2>
+                    <p>Examiner les prestataires en attente, approuver ou refuser les profils.</p>
+                </div>
+                <button class="service-action" type="button" data-role="prestataires" data-label="Gestionnaire de prestataires" aria-haspopup="dialog">
+                    Se connecter
+                </button>
+            </article>
+
+            <article class="service-card service-card-vehicles">
+                <span class="service-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="m5 11 1.5-5h11L19 11l2 2v5h-2v2h-3v-2H8v2H5v-2H3v-5l2-2Z" />
+                        <path d="M6 11h12M6.5 15h.01M17.5 15h.01" />
+                    </svg>
+                </span>
+                <div class="service-card-content">
+                    <p class="card-kicker">Mobilité</p>
+                    <h2>Voitures</h2>
+                    <p>Contrôler les véhicules proposés et accéder à l'espace voitures.</p>
+                </div>
+                <button class="service-action" type="button" data-role="voitures" data-label="Gestionnaire de voitures" aria-haspopup="dialog">
+                    Se connecter
+                </button>
+            </article>
+        </section>
+
+        <section class="dashboard-panel home-dashboard-panel" aria-live="polite" aria-labelledby="dashboard-title">
+            <div>
+                <p class="eyebrow">Votre espace</p>
+                <h2 id="dashboard-title">Accédez à votre tableau de bord</h2>
+            </div>
+            <div class="dashboard-access">
+                <p id="dashboard-status" class="status-text">
+                    Sélectionnez un espace de gestion pour accéder à votre tableau de bord.
+                </p>
+                <a id="dashboard-link" class="dashboard-link" href="#" hidden></a>
+            </div>
+        </section>
+    </main>
+
+    <dialog id="login-dialog" class="login-dialog">
+        <form id="login-form" method="dialog" class="login-form">
+            <header class="dialog-header">
+                <div>
+                    <p class="eyebrow">Accès sécurisé</p>
+                    <h2 id="login-title">Gestionnaire</h2>
+                </div>
+                <button class="icon-button" value="cancel" type="button" aria-label="Fermer" id="close-dialog">x</button>
+            </header>
+
+            <p id="login-description" class="login-description">Connectez-vous avec votre compte gestionnaire pour continuer.</p>
+            <input type="hidden" id="selected-role" name="role">
+
+            <label for="nom">Nom</label>
+            <input id="nom" name="nom" type="text" autocomplete="username" required placeholder="admin_maisons">
+
+            <label for="mot_de_passe">Mot de passe</label>
+            <div class="password-field">
+                <input id="mot_de_passe" name="mot_de_passe" type="password" autocomplete="current-password" required placeholder="Mot de passe">
+                <button id="toggle-password" class="password-toggle" type="button" aria-label="Afficher le mot de passe" aria-pressed="false">
+                    <span aria-hidden="true">👁</span>
+                </button>
+            </div>
+
+            <p id="login-message" class="form-message" role="status" aria-live="polite"></p>
+
+            <button class="submit-button" type="submit">Se connecter</button>
+        </form>
+    </dialog>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

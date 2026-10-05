@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Modifier la maison</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell house-edit-page">
+    <header class="house-edit-header">
+        <a class="house-edit-brand" href="/dashboard/maisons" aria-label="GOYING, tableau de bord immobilier">
+            <span class="house-edit-brand-mark" aria-hidden="true">G</span>
+            <span><strong>GOYING</strong><small>GESTION IMMOBILIÈRE</small></span>
+        </a>
+        <nav class="house-edit-nav" aria-label="Navigation immobilière">
+            <a href="/maisons">Maisons ajoutées</a>
+            <a href="/dashboard/maisons">Dashboard</a>
+        </nav>
+    </header>
+
+    <section class="house-edit-hero">
+        <div>
+            <p class="house-edit-kicker">ESPACE D’ADMINISTRATION · IMMOBILIER</p>
+            <h1>Modifier la maison</h1>
+            <p>Modifiez les informations, le prix et les photos de ce bien immobilier.</p>
+        </div>
+        <a class="house-edit-back" href="/maisons"><span aria-hidden="true">←</span> Maisons ajoutées</a>
+    </section>
+
+    <nav class="house-edit-progress" aria-label="Sections du formulaire">
+        <a href="#edit-location"><span>01</span> Localisation</a>
+        <a href="#edit-information"><span>02</span> Informations</a>
+        <a href="#edit-pricing"><span>03</span> Prix</a>
+        <a href="#edit-photos"><span>04</span> Photos</a>
+    </nav>
+
+    <div id="form-status" class="form-message house-edit-status" aria-live="polite" role="status" hidden></div>
+
+    <form id="maison-edit-form" class="house-edit-form" data-maison-id="{{ maison_id }}" enctype="multipart/form-data">
+        <div class="house-edit-layout">
+            <div class="house-edit-main-column">
+                <section class="house-edit-section" id="edit-location" aria-labelledby="edit-location-title">
+                    <header class="house-edit-section-heading">
+                        <span aria-hidden="true">⌖</span>
+                        <div><p>ADRESSE DU BIEN</p><h2 id="edit-location-title">Localisation</h2></div>
+                    </header>
+                    <div class="house-edit-fields house-edit-location-fields">
+                        <label for="commune">Commune<input id="commune" name="commune" autocomplete="address-level2" placeholder="Ex. Ngaliema"></label>
+                        <label for="quartier">Quartier<input id="quartier" name="quartier" autocomplete="address-level3" placeholder="Ex. Binza"></label>
+                        <label class="house-edit-field-wide" for="avenue">Avenue et numéro<input id="avenue" name="avenue" autocomplete="street-address" placeholder="Avenue et numéro de la parcelle"></label>
+                    </div>
+                </section>
+
+                <section class="house-edit-section" id="edit-information" aria-labelledby="edit-information-title">
+                    <header class="house-edit-section-heading">
+                        <span aria-hidden="true">⌂</span>
+                        <div><p>PRÉSENTATION</p><h2 id="edit-information-title">Informations sur le bien</h2></div>
+                    </header>
+                    <div class="house-edit-fields">
+                        <label class="house-edit-field-wide" for="titre">Titre de la maison<input id="titre" name="titre" placeholder="Nom ou titre du bien"></label>
+                        <label class="house-edit-field-wide" for="type_maison">Type de maison
+                            <select id="type_maison" name="type_maison" required>
+                                <option value="villa">Villa</option><option value="appartement">Appartement</option>
+                                <option value="bureau">Bureau</option><option value="maison">Maison</option>
+                                <option value="studio">Studio</option><option value="terrain">Terrain</option>
+                            </select>
+                        </label>
+                        <label class="house-edit-field-wide" for="description">Description<textarea id="description" name="description" rows="6" placeholder="Décrivez le bien immobilier et ses principaux atouts…"></textarea></label>
+                    </div>
+                </section>
+
+                <section class="house-edit-section" aria-labelledby="edit-extra-title">
+                    <header class="house-edit-section-heading">
+                        <span aria-hidden="true">✦</span>
+                        <div><p>DÉTAILS DU BIEN</p><h2 id="edit-extra-title">Informations supplémentaires</h2></div>
+                    </header>
+                    <label class="house-edit-label" for="informations_complementaires">Informations complémentaires <span>Facultatif</span></label>
+                    <textarea id="informations_complementaires" name="informations_complementaires" rows="3" placeholder="Autres informations utiles sur ce bien…"></textarea>
+                    <div id="informations-personnalisees" class="house-edit-custom-information">
+                        <div class="house-edit-custom-heading"><strong>Informations personnalisées</strong><button type="button" id="ajouter-information" class="house-edit-add-information"><span aria-hidden="true">＋</span> Ajouter une information</button></div>
+                        <p class="house-edit-help">Ajoutez des précisions déjà associées à ce bien.</p>
+                        <div id="custom-information-rows"></div>
+                    </div>
+                    <input type="hidden" id="informations_personnalisees" name="informations_personnalisees" value="[]">
+                </section>
+
+                <section class="house-edit-section" aria-labelledby="edit-characteristics-title">
+                    <header class="house-edit-section-heading">
+                        <span aria-hidden="true">▤</span>
+                        <div><p>AGENCEMENT</p><h2 id="edit-characteristics-title">Caractéristiques</h2></div>
+                    </header>
+                    <div class="house-edit-fields house-edit-characteristics residential-fields">
+                        <label for="chambres">Nombre de chambres<input type="number" id="chambres" name="chambres" min="0" inputmode="numeric"></label>
+                        <label for="superficie">Longueur / superficie<input id="superficie" name="superficie" placeholder="Valeur telle qu’enregistrée"></label>
+                        <label for="salles_bains">Nombre de salles de bains<input type="number" id="salles_bains" name="salles_bains" min="0" inputmode="numeric"></label>
+                    </div>
+                    <p class="house-edit-help residential-fields">Les caractéristiques résidentielles s’affichent selon le type de bien sélectionné.</p>
+                </section>
+
+                <section class="house-edit-section" id="edit-pricing" aria-labelledby="edit-pricing-title">
+                    <header class="house-edit-section-heading">
+                        <span aria-hidden="true">$</span>
+                        <div><p>CONDITIONS</p><h2 id="edit-pricing-title">Prix et transaction</h2></div>
+                    </header>
+                    <div class="house-edit-fields">
+                        <label for="prix">Prix<input type="number" id="prix" name="prix" min="0" step="any" inputmode="decimal" placeholder="Prix du bien"></label>
+                        <label for="type">Type de transaction
+                            <select id="type" name="type"><option value="a_vendre">À vendre</option><option value="a_louer">À louer</option></select>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="house-edit-section" aria-labelledby="edit-contact-title">
+                    <header class="house-edit-section-heading">
+                        <span aria-hidden="true">☎</span>
+                        <div><p>COORDONNÉES</p><h2 id="edit-contact-title">Contact</h2></div>
+                    </header>
+                    <label class="house-edit-field-wide" for="telephone">Numéro de téléphone<input type="tel" id="telephone" name="telephone" autocomplete="tel" placeholder="Numéro de contact associé au bien"></label>
+                </section>
+            </div>
+
+            <aside class="house-edit-side-column">
+                <section class="house-edit-section house-edit-gallery-section" id="edit-photos" aria-labelledby="edit-photos-title">
+                    <header class="house-edit-section-heading">
+                        <span aria-hidden="true">▧</span>
+                        <div><p>PHOTOS DU BIEN</p><h2 id="edit-photos-title">Galerie photos</h2></div>
+                    </header>
+                    <p class="house-edit-gallery-caption">Photos actuelles du bien</p>
+                    <div id="existing-photos" class="house-edit-existing-photos" aria-live="polite"><div class="house-edit-photo-loading">Chargement des photos…</div></div>
+
+                    <div class="house-edit-upload-heading"><strong>Nouvelles photos</strong><span>Facultatif</span></div>
+                    <label class="house-edit-upload-zone" for="photos" data-upload-zone tabindex="0">
+                        <span class="house-edit-upload-icon" aria-hidden="true">↑</span>
+                        <strong>Ajouter des photos</strong>
+                        <span>Cliquez pour choisir ou déposez vos images ici</span>
+                        <small>Les photos existantes sont conservées ; les nouvelles seront ajoutées à la galerie.</small>
+                    </label>
+                    <input class="house-edit-file-input" type="file" id="photos" name="photos" accept="image/*" multiple>
+                    <div id="new-photo-previews" class="house-edit-new-photos" aria-live="polite"></div>
+                </section>
+
+                <section class="house-edit-save-card">
+                    <span aria-hidden="true">✓</span>
+                    <div><strong>Prêt à enregistrer ?</strong><p>Vos nouvelles photos seront ajoutées aux photos existantes.</p></div>
+                    <button type="submit" class="house-edit-submit"><span aria-hidden="true">▣</span> Enregistrer les modifications</button>
+                    <a href="/maisons" class="house-edit-cancel">Annuler et revenir aux maisons</a>
+                </section>
+            </aside>
+        </div>
+    </form>
+</main>
+
+<dialog id="house-photo-dialog" class="house-photo-dialog" aria-label="Aperçu de la photo">
+    <div class="house-photo-dialog-content">
+        <button type="button" class="house-photo-dialog-close" data-photo-close aria-label="Fermer l’aperçu">×</button>
+        <button type="button" class="house-photo-dialog-nav is-previous" data-photo-step="-1" aria-label="Photo précédente">‹</button>
+        <img id="house-photo-dialog-image" src="" alt="">
+        <button type="button" class="house-photo-dialog-nav is-next" data-photo-step="1" aria-label="Photo suivante">›</button>
+        <span id="house-photo-dialog-count"></span>
+    </div>
+</dialog>
+<script src="/static/modifier-maison.js"></script>
+</body>
+</html>

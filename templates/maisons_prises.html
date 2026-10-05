@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Maisons vendues / louées</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell taken-houses-page">
+    <header class="taken-houses-header">
+        <a class="taken-houses-brand" href="/dashboard/maisons" aria-label="GOYING, tableau de bord immobilier">
+            <span class="taken-houses-brand-mark" aria-hidden="true">G</span>
+            <span><strong>GOYING</strong><small>GESTION IMMOBILIÈRE</small></span>
+        </a>
+        <nav class="taken-houses-nav" aria-label="Navigation immobilière">
+            <a href="/dashboard/maisons">Dashboard</a>
+            <a href="/maisons/disponibles">Maisons disponibles</a>
+            <a class="is-primary" href="/maisons/ajouter"><span aria-hidden="true">＋</span> Ajouter</a>
+            <button type="button" id="actualiser-maisons" class="taken-houses-refresh"><span aria-hidden="true">↻</span> Actualiser</button>
+            <button type="button" class="taken-houses-logout" data-house-logout>Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="taken-houses-hero">
+        <div>
+            <p class="taken-houses-kicker"><span aria-hidden="true">⌂</span> ESPACE D’ADMINISTRATION</p>
+            <h1>Maisons vendues / louées</h1>
+            <p>Historique des maisons déjà prises</p>
+        </div>
+        <span class="taken-houses-hero-mark" aria-hidden="true">⌂</span>
+    </section>
+
+    <section class="taken-houses-panel" aria-labelledby="taken-houses-count-label">
+        <div class="taken-houses-toolbar">
+            <div class="taken-houses-count">
+                <span id="compteur-maisons" aria-live="polite">—</span>
+                <div>
+                    <span class="taken-houses-history-badge"><span aria-hidden="true">▣</span> Historique</span>
+                    <strong id="taken-houses-count-label">Maisons vendues / louées</strong>
+                    <small>Biens actuellement indisponibles</small>
+                </div>
+            </div>
+        </div>
+        <div id="taken-houses-notice" class="taken-houses-notice" role="status" aria-live="polite" hidden></div>
+        <div id="liste-maisons-prises" class="maisons taken-houses-list" aria-live="polite" aria-busy="true">
+            <div class="taken-houses-loading">
+                <span class="taken-houses-skeleton taken-houses-skeleton-photo"></span>
+                <span class="taken-houses-skeleton taken-houses-skeleton-content"></span>
+                <span class="taken-houses-spinner" aria-hidden="true"></span>
+                <span>Chargement de l’historique…</span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<dialog id="taken-house-photo-dialog" class="taken-house-photo-dialog" aria-label="Aperçu des photos de la maison">
+    <div class="taken-house-photo-dialog-content">
+        <button type="button" class="taken-house-dialog-close" data-taken-photo-close aria-label="Fermer l’aperçu">×</button>
+        <button type="button" class="taken-house-dialog-step is-previous" data-taken-photo-step="-1" aria-label="Photo précédente">‹</button>
+        <img id="taken-house-photo-dialog-image" src="" alt="">
+        <span id="taken-house-photo-dialog-fallback" hidden>⌂<small>Photo indisponible</small></span>
+        <button type="button" class="taken-house-dialog-step is-next" data-taken-photo-step="1" aria-label="Photo suivante">›</button>
+        <span id="taken-house-photo-dialog-count"></span>
+    </div>
+</dialog>
+
+<script src="/static/maisons.js?v=20260930"></script>
+<script src="/static/house-admin-actions.js?v=20260930"></script>
+</body>
+</html>

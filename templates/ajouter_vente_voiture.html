@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Ajouter une voiture à vendre</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell vehicle-create-page vehicle-sale-create-page">
+    <header class="vehicle-create-header">
+        <a class="vehicle-create-brand" href="/gestion/voitures" aria-label="GOYING, tableau de bord des voitures">
+            <span class="vehicle-create-brand-mark" aria-hidden="true">G</span>
+            <span><strong>GOYING</strong><small>GESTION DE FLOTTE</small></span>
+        </a>
+        <nav class="vehicle-create-nav" aria-label="Navigation voitures">
+            <a href="/gestion/voitures">Dashboard</a>
+            <a href="/voitures/ventes">Annonces de vente</a>
+            <a href="/voitures/ajouter">Ajouter une voiture de location</a>
+            <a href="/">Accueil</a>
+        </nav>
+    </header>
+
+    <section class="vehicle-create-hero" aria-labelledby="vehicle-sale-title">
+        <div>
+            <p class="vehicle-create-kicker">ESPACE D’ADMINISTRATION · VENTE AUTOMOBILE</p>
+            <h1 id="vehicle-sale-title">Ajouter une voiture à vendre</h1>
+            <p>Créez une annonce de vente distincte du parc des véhicules proposés à la location.</p>
+        </div>
+        <span class="vehicle-create-hero-mark" aria-hidden="true">↗</span>
+    </section>
+
+    <nav class="vehicle-create-progress" aria-label="Sections du formulaire de vente">
+        <a href="#sale-vehicle"><span>01</span> Véhicule</a>
+        <a href="#sale-condition"><span>02</span> État</a>
+        <a href="#sale-price"><span>03</span> Prix</a>
+        <a href="#sale-location"><span>04</span> Localisation</a>
+    </nav>
+
+    <div id="sale-form-status" class="form-message vehicle-create-status" aria-live="polite" role="status" hidden></div>
+
+    <form id="vehicle-sale-form" class="vehicle-create-form" action="/api/voitures/ventes" method="post" enctype="multipart/form-data">
+        <div class="vehicle-create-layout">
+            <div class="vehicle-create-main">
+                <section class="vehicle-create-section" id="sale-vehicle" aria-labelledby="sale-vehicle-title">
+                    <header class="vehicle-create-section-heading">
+                        <span aria-hidden="true">▣</span>
+                        <div>
+                            <p>01 · INFORMATIONS SUR LE VÉHICULE</p>
+                            <h2 id="sale-vehicle-title">Décrivez le véhicule à vendre</h2>
+                            <small>Renseignez ses caractéristiques, un contact vendeur et ses photos.</small>
+                        </div>
+                    </header>
+                    <div class="vehicle-create-fields">
+                        <label for="sale-brand">Marque <span class="vehicle-required" aria-hidden="true">*</span>
+                            <input id="sale-brand" name="brand" type="text" required maxlength="80" autocomplete="organization" placeholder="Ex. Toyota">
+                        </label>
+                        <label for="sale-model">Modèle <span class="vehicle-required" aria-hidden="true">*</span>
+                            <input id="sale-model" name="model" type="text" required maxlength="100" placeholder="Ex. Land Cruiser">
+                        </label>
+                        <label for="sale-year">Année <span class="vehicle-required" aria-hidden="true">*</span>
+                            <input id="sale-year" name="year" type="number" min="1886" max="2100" step="1" required placeholder="Ex. 2022">
+                        </label>
+                        <label for="sale-mileage">Kilométrage <span class="vehicle-required" aria-hidden="true">*</span>
+                            <span class="vehicle-number-input"><input id="sale-mileage" name="mileage" type="number" min="0" step="1" required placeholder="Ex. 45000"><span>km</span></span>
+                        </label>
+                        <label for="sale-type">Type de véhicule <span class="vehicle-required" aria-hidden="true">*</span>
+                            <select id="sale-type" name="vehicle_type" required>
+                                <option value="">Sélectionner</option>
+                                <option>Citadine</option>
+                                <option>Berline</option>
+                                <option>SUV</option>
+                                <option>4x4</option>
+                                <option>Pickup</option>
+                                <option>Minibus</option>
+                                <option>Utilitaire</option>
+                                <option>Autre</option>
+                            </select>
+                        </label>
+                        <label for="sale-whatsapp">Numéro WhatsApp (vendeur) <span class="vehicle-required" aria-hidden="true">*</span>
+                            <input id="sale-whatsapp" name="seller_whatsapp" type="tel" required inputmode="tel" autocomplete="tel" pattern="\+[1-9][0-9]{7,14}" placeholder="+243..." aria-describedby="sale-whatsapp-help">
+                            <small class="vehicle-create-help" id="sale-whatsapp-help">Format international recommandé : +243…</small>
+                        </label>
+                        <label for="sale-transmission">Transmission <span class="vehicle-required" aria-hidden="true">*</span>
+                            <select id="sale-transmission" name="transmission" required>
+                                <option value="">Sélectionner</option>
+                                <option>Manuelle</option>
+                                <option>Automatique</option>
+                            </select>
+                        </label>
+                        <label for="sale-fuel">Type de carburant <span class="vehicle-required" aria-hidden="true">*</span>
+                            <select id="sale-fuel" name="fuel" required>
+                                <option value="">Sélectionner</option>
+                                <option>Essence</option>
+                                <option>Diesel</option>
+                                <option>Électrique</option>
+                                <option>Hybride</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="vehicle-sale-photos">
+                        <label class="vehicle-create-label" for="sale-photos">Photos du véhicule <span class="vehicle-required" aria-hidden="true">*</span></label>
+                        <label class="vehicle-upload-zone" for="sale-photos" data-sale-upload-zone>
+                            <span class="vehicle-upload-icon" aria-hidden="true">＋</span>
+                            <strong>Glissez-déposez vos photos ici</strong>
+                            <span>Cliquez pour sélectionner de 1 à 10 photos</span>
+                            <small>JPG, JPEG, PNG ou WebP — 10 Mo maximum par image</small>
+                        </label>
+                        <input class="vehicle-file-input" id="sale-photos" name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required aria-describedby="sale-photo-help sale-photo-error">
+                        <small class="vehicle-create-help" id="sale-photo-help"><span data-sale-photo-count>0 / 10 photos sélectionnées</span></small>
+                        <span class="vehicle-field-error" id="sale-photo-error" role="alert" hidden></span>
+                        <div class="vehicle-photo-preview" id="sale-photo-preview" aria-live="polite"></div>
+                    </div>
+                    <label class="vehicle-create-label vehicle-sale-description" for="sale-description">Description <span class="vehicle-create-help">(optionnel)</span>
+                        <textarea id="sale-description" name="description" rows="4" maxlength="3000" placeholder="Ajoutez des détails utiles sur le véhicule."></textarea>
+                    </label>
+                </section>
+
+                <section class="vehicle-create-section" id="sale-condition" aria-labelledby="sale-condition-title">
+                    <header class="vehicle-create-section-heading">
+                        <span aria-hidden="true">✓</span>
+                        <div>
+                            <p>02 · ÉTAT DU VÉHICULE</p>
+                            <h2 id="sale-condition-title">Indiquez l’état général</h2>
+                            <small>Sélectionnez l’option qui décrit le mieux le véhicule.</small>
+                        </div>
+                    </header>
+                    <label class="vehicle-create-label" for="sale-condition-select">État du véhicule <span class="vehicle-required" aria-hidden="true">*</span>
+                        <select id="sale-condition-select" name="condition" required>
+                            <option value="">Sélectionner</option>
+                            <option>Neuf</option>
+                            <option>Occasion - Comme neuf</option>
+                            <option>Occasion - Bon état</option>
+                            <option>Occasion - État moyen</option>
+                            <option>Pour pièces / Non roulant</option>
+                        </select>
+                    </label>
+                </section>
+
+                <section class="vehicle-create-section vehicle-pricing-section" id="sale-price" aria-labelledby="sale-price-title">
+                    <header class="vehicle-create-section-heading">
+                        <span aria-hidden="true">$</span>
+                        <div>
+                            <p>03 · PRIX</p>
+                            <h2 id="sale-price-title">Prix de vente</h2>
+                            <small>Le montant de l’annonce est exprimé en dollars américains (USD).</small>
+                        </div>
+                    </header>
+                    <div class="vehicle-create-fields">
+                        <label for="sale-price-usd">Prix de vente (USD) <span class="vehicle-required" aria-hidden="true">*</span>
+                            <span class="vehicle-number-input vehicle-price-input"><span>$</span><input id="sale-price-usd" name="price_usd" type="number" min="0.01" step="0.01" required placeholder="Ex. 12500"></span>
+                        </label>
+                    </div>
+                    <label class="vehicle-sale-negotiable" for="sale-price-negotiable">
+                        <input id="sale-price-negotiable" name="price_negotiable" type="checkbox" value="true">
+                        <span><strong>Prix négociable</strong><small>Cochez si le vendeur est ouvert à la négociation.</small></span>
+                    </label>
+                </section>
+
+                <section class="vehicle-create-section" id="sale-location" aria-labelledby="sale-location-title">
+                    <header class="vehicle-create-section-heading">
+                        <span aria-hidden="true">⌖</span>
+                        <div>
+                            <p>04 · LOCALISATION</p>
+                            <h2 id="sale-location-title">Où voir le véhicule ?</h2>
+                            <small>Indiquez la ville et le quartier où le véhicule est visible.</small>
+                        </div>
+                    </header>
+                    <div class="vehicle-create-fields">
+                        <label for="sale-city">Ville où le véhicule est visible <span class="vehicle-required" aria-hidden="true">*</span>
+                            <input id="sale-city" name="city" type="text" required maxlength="100" autocomplete="address-level2" placeholder="Ex. Kinshasa">
+                        </label>
+                        <label for="sale-commune">Commune / Quartier <span class="vehicle-required" aria-hidden="true">*</span>
+                            <input id="sale-commune" name="commune" type="text" required maxlength="120" autocomplete="address-level3" placeholder="Ex. Gombe">
+                        </label>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="vehicle-create-sidebar" aria-label="Enregistrement de l’annonce">
+                <section class="vehicle-create-save-card">
+                    <p>Vérifiez les informations et ajoutez entre 1 et 10 photos avant l’enregistrement.</p>
+                    <button type="submit" class="vehicle-create-submit" data-submit-sale>
+                        <span aria-hidden="true">＋</span> Ajouter l’annonce de vente
+                    </button>
+                    <small>L’annonce sera enregistrée séparément des voitures de location.</small>
+                </section>
+            </aside>
+        </div>
+    </form>
+</main>
+<script src="/static/ajouter-vente-voiture.js"></script>
+</body>
+</html>

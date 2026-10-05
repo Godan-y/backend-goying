@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — {{ "Historique des locations et ventes" if historique else "Réservations de location" }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell car-bookings-page" data-car-bookings-page data-history="{{ 'true' if historique else 'false' }}">
+    <header class="car-bookings-header">
+        <a class="car-bookings-brand" href="/gestion/voitures" aria-label="Goying Auto, tableau de bord">
+            <span class="car-bookings-brand-mark" aria-hidden="true">G</span>
+            <span><strong>Goying Auto</strong><small>GESTION DE FLOTTE</small></span>
+        </a>
+        <nav class="car-bookings-nav" aria-label="Navigation voitures">
+            <a href="/gestion/voitures">Dashboard</a>
+            {% if historique %}
+            <a href="/voitures/reservations">À gérer</a>
+            {% else %}
+            <a href="/voitures/reservations/historique">Historique</a>
+            {% endif %}
+            <button type="button" class="car-bookings-logout" id="logout-button">Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="car-bookings-hero" aria-labelledby="car-bookings-title">
+        <div>
+            <p class="car-bookings-kicker"><span aria-hidden="true">▤</span> ESPACE DE GESTION · AUTOMOBILE</p>
+            <h1 id="car-bookings-title">{{ "Historique des locations et ventes" if historique else "Réservations de location" }}</h1>
+            <p>{{ "Retrouvez les locations clôturées et les demandes d’achat clôturées." if historique else "Demandes, locations confirmées et locations en cours pour les voitures à louer." }}</p>
+        </div>
+        <span class="car-bookings-hero-mark" aria-hidden="true">▤</span>
+    </section>
+
+    <section class="car-bookings-panel" aria-labelledby="bookings-heading">
+        <div class="car-bookings-toolbar">
+            <div>
+                <p class="car-bookings-kicker">{{ "ARCHIVES" if historique else "À GÉRER" }}</p>
+                <h2 id="bookings-heading"><span id="bookings-count" aria-live="polite">—</span><span>{{ "location(s) clôturée(s)" if historique else "réservation(s) de location" }}</span></h2>
+                <p>{{ "Historique des voitures à louer." if historique else "Suivez et traitez les demandes de location automobile." }}</p>
+            </div>
+            <button type="button" id="refresh-bookings" class="car-bookings-refresh">
+                <span class="car-bookings-refresh-icon" aria-hidden="true">↻</span>
+                <span data-refresh-label>Actualiser</span>
+            </button>
+        </div>
+        <div id="bookings-feedback" class="car-bookings-feedback" role="status" aria-live="polite" hidden></div>
+        <div id="bookings-list" class="car-bookings-list" aria-live="polite" aria-busy="true">
+            <article class="car-booking-skeleton" aria-hidden="true">
+                <span class="car-booking-skeleton-photo"></span>
+                <span class="car-booking-skeleton-line"></span>
+                <span class="car-booking-skeleton-line is-short"></span>
+                <span class="car-booking-skeleton-block"></span>
+            </article>
+            <article class="car-booking-skeleton" aria-hidden="true">
+                <span class="car-booking-skeleton-photo"></span>
+                <span class="car-booking-skeleton-line"></span>
+                <span class="car-booking-skeleton-line is-short"></span>
+                <span class="car-booking-skeleton-block"></span>
+            </article>
+        </div>
+    </section>
+    {% if historique %}
+    <section class="car-bookings-panel car-sale-history-panel" aria-labelledby="sale-history-heading">
+        <div class="car-bookings-toolbar">
+            <div>
+                <p class="car-bookings-kicker">ARCHIVES · VOITURES À VENDRE</p>
+                <h2 id="sale-history-heading"><span id="sale-history-count" aria-live="polite">—</span><span>vente(s) clôturée(s)</span></h2>
+                <p>Demandes d’achat terminées ou annulées.</p>
+            </div>
+            <a class="car-sale-history-link" href="/voitures/demandes-achat">Voir les demandes d’achat</a>
+        </div>
+        <div id="sale-history-feedback" class="car-bookings-feedback" role="status" aria-live="polite" hidden></div>
+        <div id="sale-history-list" class="car-bookings-list" aria-live="polite" aria-busy="true">
+            <article class="car-booking-skeleton" aria-hidden="true">
+                <span class="car-booking-skeleton-photo"></span>
+                <span class="car-booking-skeleton-line"></span>
+                <span class="car-booking-skeleton-line is-short"></span>
+                <span class="car-booking-skeleton-block"></span>
+            </article>
+        </div>
+    </section>
+    {% endif %}
+</main>
+
+<dialog class="car-booking-confirm-dialog" id="booking-confirm-dialog"
+        aria-labelledby="booking-confirm-title" aria-describedby="booking-confirm-description">
+    <div class="car-booking-confirm-content">
+        <span class="car-booking-confirm-icon" aria-hidden="true">!</span>
+        <p class="car-bookings-kicker">CONFIRMATION</p>
+        <h2 id="booking-confirm-title">Confirmer l’action</h2>
+        <p id="booking-confirm-description"></p>
+        <p id="booking-confirm-error" class="car-booking-confirm-error" role="alert" hidden></p>
+        <footer>
+            <button type="button" class="car-booking-confirm-cancel" id="booking-confirm-cancel">Retour</button>
+            <button type="button" class="car-booking-confirm-submit" id="booking-confirm-submit">Confirmer</button>
+        </footer>
+    </div>
+</dialog>
+
+<script src="/static/telephone.js"></script>
+<script src="/static/reservations-voitures.js"></script>
+</body>
+</html>

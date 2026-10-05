@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Ajouter une voiture à louer</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell vehicle-create-page">
+    <header class="vehicle-create-header">
+        <a class="vehicle-create-brand" href="/gestion/voitures" aria-label="GOYING, tableau de bord des voitures">
+            <span class="vehicle-create-brand-mark" aria-hidden="true">G</span>
+            <span><strong>GOYING</strong><small>GESTION DE FLOTTE</small></span>
+        </a>
+        <nav class="vehicle-create-nav" aria-label="Navigation voitures">
+            <a href="/gestion/voitures">Dashboard</a>
+            <a href="/voitures/vente/ajouter">Ajouter une voiture à vendre</a>
+            <a href="/">Accueil</a>
+        </nav>
+    </header>
+
+    <section class="vehicle-create-hero" aria-labelledby="vehicle-create-title">
+        <div>
+            <p class="vehicle-create-kicker">ESPACE D’ADMINISTRATION · AUTOMOBILE</p>
+            <h1 id="vehicle-create-title">Ajouter une voiture à louer</h1>
+            <p>Ajoutez un véhicule à la plateforme afin qu’il puisse être proposé à la réservation.</p>
+        </div>
+        <span class="vehicle-create-hero-mark" aria-hidden="true">▣</span>
+    </section>
+
+    <nav class="vehicle-create-progress" aria-label="Sections du formulaire">
+        <a href="#vehicle-information"><span>01</span> Véhicule</a>
+        <a href="#vehicle-location"><span>02</span> Localisation</a>
+        <a href="#vehicle-pricing"><span>03</span> Tarification</a>
+        <a href="#vehicle-features"><span>04</span> Équipements</a>
+        <a href="#vehicle-availability"><span>05</span> Disponibilité</a>
+        <a href="#vehicle-photos"><span>06</span> Photos</a>
+    </nav>
+
+    <div id="form-status" class="form-message vehicle-create-status" aria-live="polite" role="status" hidden></div>
+
+    <form id="vehicle-form" class="vehicle-create-form" action="/api/voitures" method="post" enctype="multipart/form-data">
+        <div class="vehicle-create-layout">
+            <div class="vehicle-create-main">
+                <section class="vehicle-create-section" id="vehicle-information" aria-labelledby="vehicle-information-title">
+                    <header class="vehicle-create-section-heading">
+                        <span aria-hidden="true">▣</span>
+                        <div>
+                            <p>IDENTITÉ ET CARACTÉRISTIQUES</p>
+                            <h2 id="vehicle-information-title">Informations du véhicule</h2>
+                            <small>Renseignez les caractéristiques principales du véhicule.</small>
+                        </div>
+                    </header>
+                    <div class="vehicle-create-fields">
+                        <label for="brand">Marque <span class="vehicle-required" aria-hidden="true">*</span>
+                            <input type="text" id="brand" name="brand" placeholder="Ex. Toyota" autocomplete="organization" required aria-describedby="brand-error">
+                            <span class="vehicle-field-error" id="brand-error" data-field-error="brand" hidden></span>
+                        </label>
+                        <label for="model">Modèle <span class="vehicle-required" aria-hidden="true">*</span>
+                            <input type="text" id="model" name="model" placeholder="Ex. RAV4" required aria-describedby="model-error">
+                            <span class="vehicle-field-error" id="model-error" data-field-error="model" hidden></span>
+                        </label>
+                        <label for="category">Catégorie <span class="vehicle-required" aria-hidden="true">*</span>
+                            <select id="category" name="category" required aria-describedby="category-error">
+                                <option value="">Sélectionner</option>
+                                <option value="Citadine">Citadine</option>
+                                <option value="Berline">Berline</option>
+                                <option value="SUV">SUV</option>
+                                <option value="Break">Break</option>
+                                <option value="Monospace">Monospace</option>
+                                <option value="Utilitaire">Utilitaire</option>
+                            </select>
+                            <span class="vehicle-field-error" id="category-error" data-field-error="category" hidden></span>
+                        </label>
+                        <label for="fuel">Carburant <span class="vehicle-required" aria-hidden="true">*</span>
+                            <select id="fuel" name="fuel" required aria-describedby="fuel-error">
+                                <option value="">Sélectionner</option>
+                                <option value="Essence">Essence</option>
+                                <option value="Diesel">Diesel</option>
+                                <option value="Hybride">Hybride</option>
+                                <option value="Électrique">Électrique</option>
+                            </select>
+                            <span class="vehicle-field-error" id="fuel-error" data-field-error="fuel" hidden></span>
+                        </label>
+                        <label for="transmission">Transmission <span class="vehicle-required" aria-hidden="true">*</span>
+                            <select id="transmission" name="transmission" required aria-describedby="transmission-error">
+                                <option value="">Sélectionner</option>
+                                <option value="Manuelle">Manuelle</option>
+                                <option value="Automatique">Automatique</option>
+                            </select>
+                            <span class="vehicle-field-error" id="transmission-error" data-field-error="transmission" hidden></span>
+                        </label>
+                        <label for="seats">Nombre de places <span class="vehicle-required" aria-hidden="true">*</span>
+                            <span class="vehicle-number-input"><input type="number" id="seats" name="seats" min="1" step="1" value="5" required aria-describedby="seats-unit seats-error"><span id="seats-unit">places</span></span>
+                            <span class="vehicle-field-error" id="seats-error" data-field-error="seats" hidden></span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="vehicle-create-section" id="vehicle-location" aria-labelledby="vehicle-location-title">
+                    <header class="vehicle-create-section-heading">
+                        <span aria-hidden="true">⌖</span>
+                        <div>
+                            <p>EMPLACEMENT DU VÉHICULE</p>
+                            <h2 id="vehicle-location-title">Localisation</h2>
+                            <small>Indiquez où le véhicule peut être vu par les clients.</small>
+                        </div>
+                    </header>
+                    <div class="vehicle-create-fields">
+                        <label for="city">Ville où le véhicule est visible <span class="vehicle-required" aria-hidden="true">*</span>
+                            <input type="text" id="city" name="city" placeholder="Ex. Kinshasa" autocomplete="address-level2" required aria-describedby="city-error">
+                            <span class="vehicle-field-error" id="city-error" data-field-error="city" hidden></span>
+                        </label>
+                        <label for="commune">Commune / Quartier <span class="vehicle-required" aria-hidden="true">*</span>
+                            <input type="text" id="commune" name="commune" placeholder="Ex. Gombe" autocomplete="address-level3" required aria-describedby="commune-error">
+                            <span class="vehicle-field-error" id="commune-error" data-field-error="commune" hidden></span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="vehicle-create-section vehicle-pricing-section" id="vehicle-pricing" aria-labelledby="vehicle-pricing-title">
+                    <header class="vehicle-create-section-heading">
+                        <span aria-hidden="true">◈</span>
+                        <div>
+                            <p>PRIX DE RÉSERVATION</p>
+                            <h2 id="vehicle-pricing-title">Tarification</h2>
+                            <small>Définissez le tarif appliqué à chaque journée de réservation.</small>
+                        </div>
+                    </header>
+                    <div class="vehicle-create-fields">
+                        <label for="price_per_day">Prix par jour <span class="vehicle-required" aria-hidden="true">*</span>
+                            <span class="vehicle-number-input vehicle-price-input"><input type="number" id="price_per_day" name="price_per_day" min="0" step="1" placeholder="Ex. 45" required aria-describedby="price-unit price-help price_per_day-error"><span id="price-unit">par jour</span></span>
+                            <small class="vehicle-create-help" id="price-help">Saisissez un montant entier, sans décimales.</small>
+                            <span class="vehicle-field-error" id="price_per_day-error" data-field-error="price_per_day" hidden></span>
+                        </label>
+                        <label for="currency">Devise <span class="vehicle-required" aria-hidden="true">*</span>
+                            <select id="currency" name="currency" required aria-describedby="currency-error">
+                                <option value="€">€</option>
+                                <option value="$">$</option>
+                                <option value="CDF">CDF</option>
+                            </select>
+                            <span class="vehicle-field-error" id="currency-error" data-field-error="currency" hidden></span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="vehicle-create-section" id="vehicle-features" aria-labelledby="vehicle-features-title">
+                    <header class="vehicle-create-section-heading">
+                        <span aria-hidden="true">✦</span>
+                        <div>
+                            <p>CONFORT ET OPTIONS</p>
+                            <h2 id="vehicle-features-title">Équipements</h2>
+                            <small>Ajoutez les équipements réellement présents dans ce véhicule.</small>
+                        </div>
+                    </header>
+                    <label class="vehicle-create-label" for="features">Équipements <span class="vehicle-required" aria-hidden="true">*</span>
+                        <textarea id="features" name="features" rows="4" placeholder="Ex. Climatisation, GPS, Bluetooth" required aria-describedby="features-help features-error"></textarea>
+                    </label>
+                    <p class="vehicle-create-help" id="features-help">Séparez chaque équipement par une virgule.</p>
+                    <span class="vehicle-field-error" id="features-error" data-field-error="features" hidden></span>
+                </section>
+
+                <section class="vehicle-create-section" id="vehicle-availability" aria-labelledby="vehicle-availability-title">
+                    <header class="vehicle-create-section-heading">
+                        <span aria-hidden="true">✓</span>
+                        <div>
+                            <p>ÉTAT DU VÉHICULE</p>
+                            <h2 id="vehicle-availability-title">Disponibilité</h2>
+                            <small>Choisissez si le véhicule peut actuellement être réservé.</small>
+                        </div>
+                    </header>
+                    <label class="vehicle-availability-toggle" for="is_available">
+                        <span class="vehicle-switch">
+                            <input type="checkbox" id="is_available" name="is_available" value="true" checked>
+                            <span aria-hidden="true"></span>
+                        </span>
+                        <span class="vehicle-availability-copy">
+                            <strong>Disponible à la réservation</strong>
+                            <small>Le véhicule peut actuellement être réservé par les utilisateurs.</small>
+                        </span>
+                        <span class="vehicle-availability-state" data-availability-label>Disponible</span>
+                    </label>
+                </section>
+
+                <section class="vehicle-create-section vehicle-photos-section" id="vehicle-photos" aria-labelledby="vehicle-photos-title">
+                    <header class="vehicle-create-section-heading">
+                        <span aria-hidden="true">▧</span>
+                        <div>
+                            <p>PRÉSENTATION DU VÉHICULE</p>
+                            <h2 id="vehicle-photos-title">Photos du véhicule</h2>
+                            <small>Ajoutez une ou plusieurs photos JPG, PNG ou WebP (10 Mo maximum chacune). La première devient l’image principale.</small>
+                        </div>
+                    </header>
+                    <label class="vehicle-upload-zone" for="photos" data-upload-zone>
+                        <span class="vehicle-upload-icon" aria-hidden="true">＋</span>
+                        <strong>Glissez-déposez vos images ici</strong>
+                        <span>Cliquez pour sélectionner des photos</span>
+                        <small>JPG, JPEG, PNG ou WebP — 10 Mo maximum par image</small>
+                    </label>
+                    <input class="vehicle-file-input" type="file" id="photos" name="photos" accept="image/jpeg,image/png,image/webp" multiple required aria-describedby="photos-error">
+                    <span class="vehicle-field-error" id="photos-error" data-field-error="photos" role="alert" hidden></span>
+                    <div class="vehicle-photo-preview" id="vehicle-photo-preview" aria-live="polite"></div>
+                </section>
+            </div>
+
+            <aside class="vehicle-create-sidebar" aria-label="Aperçu du véhicule">
+                <section class="vehicle-create-summary">
+                    <p class="vehicle-create-kicker">APERÇU DU DOSSIER</p>
+                    <div class="vehicle-summary-icon" aria-hidden="true">▣</div>
+                    <p class="vehicle-summary-eyebrow" data-summary-category>Catégorie du véhicule</p>
+                    <h2 data-summary-title>Votre véhicule</h2>
+                    <div class="vehicle-summary-divider"></div>
+                    <div class="vehicle-summary-line"><span>Carburant</span><strong data-summary-fuel>À renseigner</strong></div>
+                    <div class="vehicle-summary-line"><span>Transmission</span><strong data-summary-transmission>À renseigner</strong></div>
+                    <div class="vehicle-summary-line"><span>Places</span><strong data-summary-seats>5 places</strong></div>
+                    <div class="vehicle-summary-line"><span>Tarif journalier</span><strong data-summary-price>À renseigner</strong></div>
+                    <div class="vehicle-summary-availability" data-summary-availability><span aria-hidden="true"></span> Disponible</div>
+                    <p class="vehicle-summary-photo-count" data-summary-photos>0 photo sélectionnée</p>
+                </section>
+                <section class="vehicle-create-save-card">
+                    <p>Vérifiez les caractéristiques et ajoutez au moins une photo avant l’enregistrement.</p>
+                    <button type="submit" class="vehicle-create-submit" data-submit-vehicle>
+                        <span aria-hidden="true">＋</span> Ajouter la voiture
+                    </button>
+                    <small>Les informations seront enregistrées dans le parc automobile Goying.</small>
+                </section>
+            </aside>
+        </div>
+    </form>
+</main>
+<script src="/static/ajouter-voiture.js"></script>
+</body>
+</html>

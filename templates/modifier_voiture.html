@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goying - Modifier une voiture</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell" data-vehicle-edit-page data-vehicle-id="{{ vehicle_id }}">
+    <header class="topbar">
+        <div><p class="eyebrow">Goying</p><h1>Modifier une voiture</h1></div>
+        <nav class="toplinks"><a href="/voitures/liste">Retour aux voitures</a><button class="nav-button" type="button" id="logout-button">Déconnexion</button></nav>
+    </header>
+    <section class="management-panel">
+        <p id="form-status" class="form-message" aria-live="polite"></p>
+        <form id="vehicle-edit-form" class="provider-form">
+            <label>Marque<input name="brand" required></label>
+            <label>Modèle<input name="model" required></label>
+            <label>Catégorie<input name="category" required></label>
+            <label>Carburant<input name="fuel" required></label>
+            <label>Transmission<input name="transmission" required></label>
+            <label>Places<input name="seats" type="number" min="1" required></label>
+            <label>Ville où le véhicule est visible<input name="city" autocomplete="address-level2"></label>
+            <label>Commune / Quartier<input name="commune" autocomplete="address-level3"></label>
+            <label>Prix par jour<input name="price_per_day" type="number" min="0" required></label>
+            <label>Devise<input name="currency" required></label>
+            <label>Équipements, séparés par des virgules<textarea name="features" rows="3"></textarea></label>
+            <label class="checkbox-label"><input name="is_available" type="checkbox"> Disponible à la réservation</label>
+            <label>Ajouter des photos<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label>
+            <p class="status-text">Les nouvelles photos s’ajoutent aux photos existantes.</p>
+            <button class="submit-button" type="submit">Enregistrer les modifications</button>
+        </form>
+    </section>
+</main>
+<script src="/static/modifier-voiture.js"></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Annonces de voitures à vendre</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell vehicle-sales-page" data-vehicle-sales-page data-endpoint="/api/voitures/ventes">
+    <header class="vehicle-sales-header">
+        <a class="vehicle-sales-brand" href="/gestion/voitures" aria-label="GOYING, tableau de bord voitures">
+            <span class="vehicle-sales-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>VENTE AUTOMOBILE</small></span>
+        </a>
+        <nav class="vehicle-sales-nav" aria-label="Navigation des voitures">
+            <a href="/gestion/voitures">Dashboard</a>
+            <a href="/voitures/liste">Parc de location</a>
+            <a href="/voitures/demandes-achat">Demandes d'achat</a>
+            <a href="/voitures/vente/ajouter" class="is-primary">＋ Ajouter une annonce</a>
+            <button type="button" data-sales-logout>Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="vehicle-sales-hero">
+        <div>
+            <p class="vehicle-sales-kicker">ESPACE DE GESTION · ANNONCES</p>
+            <h1>Gestion des véhicules proposés à la vente</h1>
+            <p>Consultez les annonces, leurs caractéristiques et les informations administratives des vendeurs.</p>
+        </div>
+        <span class="vehicle-sales-hero-mark" aria-hidden="true">↗</span>
+    </section>
+
+    <section class="vehicle-sales-stats" aria-label="Résumé des annonces">
+        <article><span aria-hidden="true">▣</span><div><small>Total des annonces</small><strong data-sales-total>—</strong></div></article>
+        <article><span aria-hidden="true">✓</span><div><small>Disponibles</small><strong data-sales-available>—</strong></div></article>
+    </section>
+
+    <section class="vehicle-sales-panel" aria-labelledby="vehicle-sales-list-title">
+        <div class="vehicle-sales-toolbar">
+            <div>
+                <p class="vehicle-sales-kicker">COLLECTION VEHICLESALES</p>
+                <h2 id="vehicle-sales-list-title"><span data-sales-count>—</span> <span data-sales-count-label>annonces</span></h2>
+            </div>
+            <div class="vehicle-sales-toolbar-actions">
+                <label class="vehicle-sales-search">
+                    <span class="visually-hidden">Rechercher une annonce</span>
+                    <span aria-hidden="true">⌕</span>
+                    <input type="search" data-sales-search placeholder="Marque, modèle, ville, vendeur, référence…" autocomplete="off">
+                </label>
+                <label class="vehicle-sales-status-filter">
+                    <span class="visually-hidden">Filtrer par statut</span>
+                    <select data-sales-status-filter>
+                        <option value="">Tous les statuts</option>
+                    </select>
+                </label>
+                <button class="vehicle-sales-refresh" type="button" data-sales-refresh>
+                    <span aria-hidden="true">↻</span><span data-sales-refresh-label>Actualiser</span>
+                </button>
+            </div>
+        </div>
+        <p class="vehicle-sales-feedback" data-sales-feedback role="status" aria-live="polite"></p>
+        <div class="vehicle-sales-grid" data-sales-list aria-live="polite" aria-busy="true">
+            <article class="vehicle-sale-skeleton" aria-hidden="true">
+                <span class="vehicle-sale-skeleton-image"></span>
+                <span class="vehicle-sale-skeleton-content"><i class="is-title"></i><i class="is-price"></i><i class="is-features"></i><i class="is-location"></i><i class="is-owner"></i><i class="is-actions"></i></span>
+            </article>
+            <article class="vehicle-sale-skeleton" aria-hidden="true">
+                <span class="vehicle-sale-skeleton-image"></span>
+                <span class="vehicle-sale-skeleton-content"><i class="is-title"></i><i class="is-price"></i><i class="is-features"></i><i class="is-location"></i><i class="is-owner"></i><i class="is-actions"></i></span>
+            </article>
+            <article class="vehicle-sale-skeleton" aria-hidden="true">
+                <span class="vehicle-sale-skeleton-image"></span>
+                <span class="vehicle-sale-skeleton-content"><i class="is-title"></i><i class="is-price"></i><i class="is-features"></i><i class="is-location"></i><i class="is-owner"></i><i class="is-actions"></i></span>
+            </article>
+        </div>
+    </section>
+</main>
+<dialog class="vehicle-sale-detail-dialog" data-sales-detail-dialog aria-labelledby="sales-detail-title">
+    <div class="vehicle-sale-detail-content">
+        <header>
+            <div><p class="vehicle-sales-kicker">FICHE DE L’ANNONCE</p><h2 id="sales-detail-title" data-sales-detail-title></h2></div>
+            <button type="button" data-sales-detail-close aria-label="Fermer les détails">×</button>
+        </header>
+        <div data-sales-detail-body></div>
+    </div>
+</dialog>
+<dialog class="vehicle-sale-action-dialog" data-sales-action-dialog aria-labelledby="sales-action-title">
+    <div class="vehicle-sale-action-content">
+        <header>
+            <div><p class="vehicle-sales-kicker">ACTION ADMINISTRATEUR</p><h2 id="sales-action-title" data-sales-action-title></h2></div>
+            <button type="button" data-sales-action-close aria-label="Fermer">×</button>
+        </header>
+        <p data-sales-action-message></p>
+        <footer>
+            <button type="button" class="is-secondary" data-sales-action-cancel>Annuler</button>
+            <button type="button" class="is-primary" data-sales-action-confirm></button>
+        </footer>
+    </div>
+</dialog>
+<script src="/static/ventes-voitures.js"></script>
+</body>
+</html>

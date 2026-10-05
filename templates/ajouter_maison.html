@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Ajouter une nouvelle maison</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell house-create-page">
+    <header class="house-create-header">
+        <a class="house-create-brand" href="/dashboard/maisons" aria-label="GOYING, tableau de bord immobilier">
+            <span class="house-create-brand-mark" aria-hidden="true">G</span>
+            <span><strong>GOYING</strong><small>GESTION IMMOBILIÈRE</small></span>
+        </a>
+        <nav class="house-create-nav" aria-label="Navigation immobilière">
+            <a href="/dashboard/maisons">Dashboard</a>
+            <a href="/">Accueil</a>
+        </nav>
+    </header>
+
+    <section class="house-create-hero">
+        <div>
+            <p class="house-create-kicker">ESPACE D’ADMINISTRATION · IMMOBILIER</p>
+            <h1>Ajouter une nouvelle maison</h1>
+            <p>Ajoutez un nouveau bien immobilier à la plateforme Goying.</p>
+        </div>
+        <span class="house-create-hero-mark" aria-hidden="true">⌂</span>
+    </section>
+
+    <nav class="house-create-progress" aria-label="Sections du formulaire">
+        <a href="#create-location"><span>01</span> Localisation</a>
+        <a href="#create-information"><span>02</span> Informations</a>
+        <a href="#create-extra"><span>03</span> Détails</a>
+        <a href="#create-pricing"><span>04</span> Prix</a>
+        <a href="#create-contact"><span>05</span> Contact</a>
+        <a href="#create-photos"><span>06</span> Photos</a>
+    </nav>
+
+    <div id="form-status" class="form-message house-create-status" aria-live="polite" role="status" hidden></div>
+
+    <form id="maison-create-form" class="house-create-form" action="/api/maisons" method="POST" enctype="multipart/form-data">
+        <div class="house-create-layout">
+            <div class="house-create-main-column">
+                <section class="house-create-section" id="create-location" aria-labelledby="create-location-title">
+                    <header class="house-create-section-heading">
+                        <span aria-hidden="true">⌖</span>
+                        <div><p>EMPLACEMENT DU BIEN</p><h2 id="create-location-title">Localisation</h2><small>Indiquez où se trouve la maison.</small></div>
+                    </header>
+                    <div class="house-create-fields">
+                        <label for="commune">Commune<input type="text" id="commune" name="commune" autocomplete="address-level2" placeholder="Ex. Ngaliema"></label>
+                        <label for="quartier">Quartier<input type="text" id="quartier" name="quartier" autocomplete="address-level3" placeholder="Nom du quartier"></label>
+                        <label class="house-create-field-wide" for="avenue">Avenue et numéro<input type="text" id="avenue" name="avenue" autocomplete="street-address" placeholder="Avenue et numéro de la parcelle"></label>
+                    </div>
+                </section>
+
+                <section class="house-create-section" id="create-information" aria-labelledby="create-information-title">
+                    <header class="house-create-section-heading">
+                        <span aria-hidden="true">⌂</span>
+                        <div><p>PRÉSENTATION</p><h2 id="create-information-title">Informations du bien</h2><small>Donnez un titre et décrivez la propriété.</small></div>
+                    </header>
+                    <div class="house-create-fields">
+                        <label class="house-create-field-wide" for="titre">Titre de la maison<input type="text" id="titre" name="titre" placeholder="Nom ou titre du bien"></label>
+                        <label class="house-create-field-wide" for="type_maison">Type de maison
+                            <select id="type_maison" name="type_maison" required>
+                                <option value="">Sélectionner</option>
+                                <option value="villa">Villa</option>
+                                <option value="appartement">Appartement</option>
+                                <option value="bureau">Bureau</option>
+                                <option value="maison">Maison</option>
+                                <option value="studio">Studio</option>
+                                <option value="terrain">Terrain</option>
+                            </select>
+                        </label>
+                        <label class="house-create-field-wide" for="description">Description<textarea id="description" name="description" rows="6" placeholder="Décrivez la maison et ses principaux atouts…"></textarea></label>
+                    </div>
+                </section>
+
+                <section class="house-create-section" id="create-extra" aria-labelledby="create-extra-title">
+                    <header class="house-create-section-heading">
+                        <span aria-hidden="true">✦</span>
+                        <div><p>COMPLÉMENTS</p><h2 id="create-extra-title">Informations supplémentaires</h2><small>Ajoutez les détails utiles à cette propriété.</small></div>
+                    </header>
+                    <label class="house-create-label" for="informations_complementaires">Informations complémentaires <span>Facultatif</span></label>
+                    <textarea id="informations_complementaires" name="informations_complementaires" rows="4" placeholder="Parking, piscine, clôture, dépendance, proximité…"></textarea>
+                    <div class="house-create-custom-information" id="informations-personnalisees">
+                        <div class="house-create-custom-heading">
+                            <div><strong>Informations personnalisées</strong><p>Ajoutez des paires nom et valeur selon les besoins du bien.</p></div>
+                            <button type="button" id="ajouter-information" class="house-create-add-information"><span aria-hidden="true">＋</span> Ajouter une information</button>
+                        </div>
+                        <div id="custom-information-rows"></div>
+                    </div>
+                    <input type="hidden" id="informations_personnalisees" name="informations_personnalisees" value="[]">
+                </section>
+
+                <section class="house-create-section" aria-labelledby="create-characteristics-title">
+                    <header class="house-create-section-heading">
+                        <span aria-hidden="true">▤</span>
+                        <div><p>AGENCEMENT</p><h2 id="create-characteristics-title">Caractéristiques</h2><small>Les champs résidentiels s’affichent selon le type de bien.</small></div>
+                    </header>
+                    <div class="house-create-fields house-create-characteristics residential-fields">
+                        <label for="chambres">Nombre de chambres<input type="number" id="chambres" name="chambres" min="0" inputmode="numeric"></label>
+                        <label for="superficie">Longueur / superficie<input type="text" id="superficie" name="superficie" placeholder="Ex. 20m x 30m / 600 m²"></label>
+                        <label for="salles_bains">Nombre de salles de bains<input type="number" id="salles_bains" name="salles_bains" min="0" inputmode="numeric"></label>
+                    </div>
+                </section>
+
+                <section class="house-create-section" id="create-pricing" aria-labelledby="create-pricing-title">
+                    <header class="house-create-section-heading">
+                        <span aria-hidden="true">$</span>
+                        <div><p>CONDITIONS</p><h2 id="create-pricing-title">Prix et transaction</h2><small>Renseignez le prix et le type de transaction.</small></div>
+                    </header>
+                    <div class="house-create-fields">
+                        <label for="prix">Prix<input type="number" id="prix" name="prix" min="0" placeholder="Prix du bien" inputmode="decimal"></label>
+                        <label for="type">Type de transaction
+                            <select id="type" name="type">
+                                <option value="">Sélectionner</option>
+                                <option value="a_vendre">À vendre</option>
+                                <option value="a_louer">À louer</option>
+                            </select>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="house-create-section" id="create-contact" aria-labelledby="create-contact-title">
+                    <header class="house-create-section-heading">
+                        <span aria-hidden="true">☎</span>
+                        <div><p>COORDONNÉES</p><h2 id="create-contact-title">Contact</h2><small>Numéro fourni pour joindre le contact associé au bien.</small></div>
+                    </header>
+                    <label class="house-create-field-wide" for="telephone">Numéro de téléphone<input type="tel" id="telephone" name="telephone" autocomplete="tel" placeholder="+243 …"></label>
+                    <p class="house-create-phone-note" id="house-create-phone-note" role="status" aria-live="polite"><span aria-hidden="true">⚠</span><span data-phone-guidance>Numéro WhatsApp absent. Veuillez renseigner un numéro de téléphone valide avant de contacter ce numéro sur WhatsApp. Le champ reste facultatif.</span></p>
+                </section>
+            </div>
+
+            <aside class="house-create-side-column">
+                <section class="house-create-section house-create-photos-section" id="create-photos" aria-labelledby="create-photos-title">
+                    <header class="house-create-section-heading">
+                        <span aria-hidden="true">▧</span>
+                        <div><p>MISE EN VALEUR</p><h2 id="create-photos-title">Photos de la maison</h2><small>La première photo sélectionnée sera la photo principale.</small></div>
+                    </header>
+                    <label class="house-create-upload-zone" for="photos" data-create-upload-zone tabindex="0">
+                        <span class="house-create-upload-icon" aria-hidden="true">▧</span>
+                        <strong>Ajouter les photos</strong>
+                        <span>Cliquez pour sélectionner ou déposez vos images ici</span>
+                    </label>
+                    <input class="house-create-file-input" type="file" id="photos" name="photos" accept="image/*" multiple>
+                    <div id="house-create-photo-preview" class="house-create-photo-preview" aria-live="polite"></div>
+                    <p class="house-create-photo-note">Vous pouvez sélectionner plusieurs photos. L’ordre de sélection est conservé.</p>
+                </section>
+
+                <section class="house-create-section house-create-summary" aria-labelledby="house-create-summary-title">
+                    <header class="house-create-section-heading">
+                        <span aria-hidden="true">◉</span>
+                        <div><p>APERÇU</p><h2 id="house-create-summary-title">Résumé du bien</h2><small>Mis à jour à partir des champs saisis.</small></div>
+                    </header>
+                    <div class="house-create-summary-content">
+                        <strong data-summary-title>Votre titre apparaîtra ici</strong>
+                        <p><span aria-hidden="true">⌖</span><span data-summary-location>Commune et quartier</span></p>
+                        <p><span aria-hidden="true">$</span><span data-summary-price>Prix non renseigné</span></p>
+                        <p><span aria-hidden="true">▧</span><span data-summary-photos>0 photo</span></p>
+                    </div>
+                </section>
+
+                <section class="house-create-save-card">
+                    <span aria-hidden="true">⌂</span>
+                    <div><strong>Nouvelle propriété</strong><p>Vérifiez les informations avant d’ajouter la maison à la plateforme.</p></div>
+                    <button type="submit" class="house-create-submit" data-create-submit><span aria-hidden="true">＋</span> Ajouter la maison</button>
+                    <a class="house-create-cancel" href="/maisons">Annuler et revenir aux maisons</a>
+                </section>
+            </aside>
+        </div>
+    </form>
+</main>
+<script src="/static/ajouter-maison.js?v=20260930"></script>
+</body>
+</html>

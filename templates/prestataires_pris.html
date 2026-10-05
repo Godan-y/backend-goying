@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Prestataires pris</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell provider-taken-page" data-taken-providers-page data-endpoint="/prestataires/api/pris">
+    <header class="provider-taken-header">
+        <a class="provider-taken-brand" href="/gestion/prestataires" aria-label="GOYING, dashboard prestataires">
+            <span class="provider-taken-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>GESTION DES SERVICES</small></span>
+        </a>
+        <div class="provider-taken-header-actions">
+            <button type="button" class="provider-taken-refresh" data-taken-refresh>
+                <span aria-hidden="true">↻</span> <span data-taken-refresh-label>Actualiser</span>
+            </button>
+            <button type="button" class="provider-taken-logout" data-taken-logout>Déconnexion</button>
+        </div>
+    </header>
+
+    <nav class="provider-taken-nav" aria-label="Navigation prestataires">
+        <a href="/gestion/prestataires">Dashboard</a>
+        <a href="/prestataires/en-attente">Nouvelles demandes</a>
+        <a href="/prestataires/approuves">Approuvés</a>
+        <a href="/prestataires/refuses">Refusés</a>
+        <a href="/prestataires/reserves">Disponibles</a>
+        <a href="/prestataires/pris" aria-current="page">Prestataires pris</a>
+        <a href="/prestataires/rendez-vous">Rendez-vous</a>
+    </nav>
+
+    <section class="provider-taken-hero">
+        <div>
+            <p class="provider-taken-kicker">ESPACE DE GESTION · PRESTATAIRES</p>
+            <h1>Prestataires pris</h1>
+            <p>Consultez les prestataires momentanément indisponibles et gérez leur retour en disponibilité.</p>
+        </div>
+        <span class="provider-taken-hero-icon" aria-hidden="true">—</span>
+    </section>
+
+    <div class="provider-taken-notice" data-taken-notice role="status" aria-live="polite" hidden></div>
+    <div class="provider-taken-error" data-taken-error role="alert" hidden>
+        <div><strong>Impossible de charger les prestataires</strong><p>Une erreur est survenue lors de la récupération des données.</p></div>
+        <button type="button" data-taken-retry>Réessayer</button>
+    </div>
+
+    <section class="provider-taken-stats" aria-label="Statistiques des prestataires indisponibles" aria-live="polite">
+        <article class="provider-taken-stat">
+            <span class="provider-taken-stat-icon is-gray" aria-hidden="true">—</span>
+            <div><small>Prestataires indisponibles</small><strong data-taken-stat="total">—</strong><p>Profils momentanément pris</p></div>
+        </article>
+        <article class="provider-taken-stat">
+            <span class="provider-taken-stat-icon is-gold" aria-hidden="true">▦</span>
+            <div><small>Types de services</small><strong data-taken-stat="types">—</strong><p>Types présents dans la liste</p></div>
+        </article>
+        <article class="provider-taken-stat">
+            <span class="provider-taken-stat-icon is-blue" aria-hidden="true">⌕</span>
+            <div><small>Téléphones renseignés</small><strong data-taken-stat="phones">—</strong><p>Profils avec numéro disponible</p></div>
+        </article>
+        <article class="provider-taken-stat">
+            <span class="provider-taken-stat-icon is-gray" aria-hidden="true">↻</span>
+            <div><small>Dernière actualisation</small><strong class="provider-taken-time" data-taken-updated>—</strong><p>Données chargées depuis le serveur</p></div>
+        </article>
+    </section>
+
+    <section class="provider-taken-panel">
+        <div class="provider-taken-toolbar">
+            <div>
+                <p class="provider-taken-kicker">PROFILS INDISPONIBLES</p>
+                <h2><span data-taken-visible-count>—</span> prestataire(s)</h2>
+                <p data-taken-summary>Chargement des prestataires indisponibles…</p>
+            </div>
+            <div class="provider-taken-filters">
+                <label class="provider-taken-search">
+                    <span aria-hidden="true">⌕</span>
+                    <span class="provider-taken-sr-only">Rechercher un prestataire</span>
+                    <input type="search" data-taken-search placeholder="Nom, type, téléphone, e-mail ou description…" autocomplete="off">
+                    <button type="button" data-taken-clear aria-label="Effacer la recherche" hidden>×</button>
+                </label>
+                <label>
+                    <span class="provider-taken-sr-only">Filtrer par type</span>
+                    <select data-taken-type>
+                        <option value="">Tous les types</option>
+                    </select>
+                </label>
+                <button type="button" class="provider-taken-reset" data-taken-reset hidden>Réinitialiser les filtres</button>
+            </div>
+        </div>
+
+        <div class="provider-taken-grid" data-taken-list aria-live="polite" aria-busy="true">
+            <div class="provider-taken-skeleton" aria-hidden="true"></div>
+            <div class="provider-taken-skeleton" aria-hidden="true"></div>
+            <div class="provider-taken-skeleton" aria-hidden="true"></div>
+        </div>
+    </section>
+</main>
+
+<dialog class="provider-taken-dialog" data-taken-details-dialog aria-labelledby="taken-details-title">
+    <div class="provider-taken-dialog-content">
+        <header>
+            <div><p class="provider-taken-kicker">PROFIL PRESTATAIRE</p><h2 id="taken-details-title">Détails du profil</h2></div>
+            <button type="button" class="provider-taken-dialog-close" data-taken-details-close aria-label="Fermer les détails">×</button>
+        </header>
+        <div data-taken-details-body></div>
+    </div>
+</dialog>
+
+<dialog class="provider-taken-dialog" data-taken-confirm-dialog aria-labelledby="taken-confirm-title">
+    <form method="dialog" class="provider-taken-confirm-content">
+        <span class="provider-taken-confirm-icon" data-taken-confirm-icon aria-hidden="true">✓</span>
+        <p class="provider-taken-kicker">CONFIRMATION</p>
+        <h2 id="taken-confirm-title">Confirmer l'action</h2>
+        <p data-taken-confirm-message></p>
+        <p class="provider-taken-confirm-error" data-taken-confirm-error role="alert" hidden></p>
+        <footer>
+            <button type="button" data-taken-confirm-cancel>Annuler</button>
+            <button type="button" data-taken-confirm-submit>Confirmer</button>
+        </footer>
+    </form>
+</dialog>
+
+<script src="/static/prestataires-pris.js"></script>
+</body>
+</html>

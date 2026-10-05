@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goying - Modifier un prestataire</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <main class="shell provider-form-page" data-provider-edit data-provider-id="{{ prestataire_id }}">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">Goying</p>
+                <h1>Modifier un prestataire</h1>
+            </div>
+            <nav class="toplinks" aria-label="Navigation prestataires">
+                <a href="/prestataires/approuves">Prestataires approuvés</a>
+                <a href="/gestion/prestataires">Dashboard</a>
+                <button class="nav-button" type="button" id="logout-button">Déconnexion</button>
+            </nav>
+        </header>
+
+        <section class="management-panel">
+            <p class="eyebrow">Informations professionnelles</p>
+            <h2>Mettre à jour le dossier</h2>
+            <p class="status-text">Les données de connexion ne sont pas modifiables sur cette page.</p>
+            <form id="provider-edit-form" class="provider-form">
+                <label for="type">Métier <span class="required-label">(Requis)</span></label>
+                <select id="type" name="type" required>
+                    <option value="chauffeur">Chauffeur</option>
+                    <option value="menagere">Ménagère</option>
+                </select>
+
+                <h3>Identité et contact</h3>
+                <label for="nom">Nom <span class="required-label">(Requis)</span></label>
+                <input id="nom" name="nom" type="text" required autocomplete="family-name">
+                <label for="post_nom">Post-nom</label>
+                <input id="post_nom" name="post_nom" type="text">
+                <label for="prenom">Prénom</label>
+                <input id="prenom" name="prenom" type="text" autocomplete="given-name">
+                <label for="telephone">Téléphone / WhatsApp <span class="required-label">(Requis)</span></label>
+                <input id="telephone" name="telephone" type="tel" required autocomplete="tel">
+                <label for="pays">Pays d'activité</label>
+                <input id="pays" name="pays" type="text">
+                <label for="ville">Ville d'activité</label>
+                <input id="ville" name="ville" type="text">
+                <label for="commune">Commune</label>
+                <input id="commune" name="commune" type="text">
+                <label for="annees_experience">Années d'expérience professionnelle</label>
+                <input id="annees_experience" name="annees_experience" type="number" min="0" step="1">
+                <label for="description">Présentation bio courte</label>
+                <textarea id="description" name="description" rows="4"></textarea>
+                <label for="competences">Compétences spéciales <span class="field-help-inline">(séparées par une virgule)</span></label>
+                <input id="competences" name="competences" type="text">
+                <label for="tarif_mensuel">Tarif mensuel demandé (USD)</label>
+                <input id="tarif_mensuel" name="tarif_mensuel" type="number" min="0" step="0.01">
+                <label class="checkbox-label" for="prix_negociable">
+                    <input id="prix_negociable" name="prix_negociable" type="checkbox">
+                    Prix négociable avec le client
+                </label>
+
+                <h3>Informations de chauffeur</h3>
+                <label for="permis_conduire">Numéro de permis de conduire</label>
+                <input id="permis_conduire" name="permis_conduire" type="text">
+                <label for="type_service">Type de service</label>
+                <input id="type_service" name="type_service" type="text">
+                <label for="transmission">Transmission</label>
+                <input id="transmission" name="transmission" type="text">
+                <label for="modele_vehicule">Modèle de véhicule</label>
+                <input id="modele_vehicule" name="modele_vehicule" type="text">
+
+                <div id="form-status" class="form-message" aria-live="polite"></div>
+                <button type="submit" class="status-button">Enregistrer les modifications</button>
+            </form>
+        </section>
+    </main>
+    <script src="/static/prestataire-edit.js"></script>
+</body>
+</html>

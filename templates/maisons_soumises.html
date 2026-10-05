@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Maisons soumises</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell available-houses-page submitted-houses-page"
+      data-submissions-page
+      data-endpoint="{{ request.url_for('maisons_soumises') }}"
+      data-delete-endpoint="{{ request.url_for('supprimer_maison_soumise', submission_id='__submission_id__') }}">
+    <header class="available-houses-header">
+        <a class="available-houses-brand" href="{{ request.url_for('maisons_dashboard_page') }}" aria-label="GOYING, tableau de bord immobilier">
+            <span class="available-houses-brand-mark" aria-hidden="true">G</span>
+            <span><strong>GOYING</strong><small>GESTION IMMOBILIÈRE</small></span>
+        </a>
+        <nav class="available-houses-nav" aria-label="Navigation immobilière">
+            <a href="{{ request.url_for('maisons_dashboard_page') }}">Dashboard</a>
+            <a href="{{ request.url_for('liste_maisons') }}">Maisons ajoutées</a>
+            <button type="button" id="logout-button">Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="available-houses-hero submitted-houses-hero" aria-labelledby="submitted-houses-title">
+        <div>
+            <p class="available-houses-kicker"><span aria-hidden="true">▤</span> ESPACE D’ADMINISTRATION</p>
+            <h1 id="submitted-houses-title">Maisons soumises</h1>
+            <p>Propositions immobilières envoyées par les utilisateurs.</p>
+        </div>
+        <div class="submitted-houses-hero-mark" aria-hidden="true">⌂</div>
+    </section>
+
+    <section class="available-houses-panel submitted-houses-panel" aria-labelledby="submissions-heading">
+        <div class="available-houses-toolbar submitted-houses-toolbar">
+            <div class="available-houses-count">
+                <span id="submissions-count" aria-live="polite">—</span>
+                <div>
+                    <strong id="submissions-heading">Soumissions</strong>
+                    <small id="submission-count-label">Nombre réel après chargement</small>
+                </div>
+            </div>
+            <button type="button" id="refresh-submissions" class="available-houses-refresh">
+                <span aria-hidden="true">↻</span> Actualiser
+            </button>
+        </div>
+        <div id="submissions-notice" class="submitted-houses-notice" role="status" aria-live="polite" hidden></div>
+        <div id="submissions-list" class="submitted-properties-grid" aria-live="polite" aria-busy="true">
+            <div class="submitted-houses-loading">
+                <span class="submitted-houses-spinner" aria-hidden="true"></span>
+                <p>Chargement des soumissions…</p>
+            </div>
+        </div>
+    </section>
+</main>
+
+<dialog id="submission-photo-dialog" class="submission-photo-dialog" aria-label="Photo de la proposition immobilière">
+    <button type="button" class="submission-dialog-close" data-close-photo aria-label="Fermer la photo">×</button>
+    <img data-dialog-image alt="">
+</dialog>
+
+<dialog id="submission-delete-dialog" class="submission-delete-dialog"
+        aria-labelledby="submission-delete-title" aria-describedby="submission-delete-description">
+    <div class="submission-delete-content">
+        <span class="submission-delete-icon" aria-hidden="true">!</span>
+        <div>
+            <p class="available-houses-kicker">CONFIRMATION ADMINISTRATEUR</p>
+            <h2 id="submission-delete-title">Supprimer cette soumission ?</h2>
+            <p id="submission-delete-description">Cette action supprimera définitivement cette proposition immobilière ainsi que sa photo associée, si elle existe.</p>
+            <p class="submission-delete-error" data-delete-error role="alert" hidden></p>
+        </div>
+        <footer>
+            <button type="button" class="submission-delete-cancel" data-cancel-delete>Annuler</button>
+            <button type="button" class="submission-delete-confirm" data-confirm-delete>Supprimer</button>
+        </footer>
+    </div>
+</dialog>
+
+<script src="/static/telephone.js"></script>
+<script src="/static/maisons-soumises.js"></script>
+</body>
+</html>

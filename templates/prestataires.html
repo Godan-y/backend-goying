@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Gestion des prestataires</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell provider-dashboard" data-provider-dashboard data-dashboard-url="/dashboard/prestataires">
+    <header class="provider-dashboard-header">
+        <a class="provider-brand" href="/" aria-label="GOYING, accueil">
+            <span class="provider-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>GESTION DES SERVICES</small></span>
+        </a>
+        <nav class="provider-top-nav" aria-label="Navigation principale">
+            <a href="/">Accueil</a>
+            <button type="button" data-logout>Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="provider-welcome">
+        <div>
+            <p class="provider-kicker">ESPACE DE GESTION · PRESTATAIRES</p>
+            <h1>Gestion des prestataires</h1>
+            <p>Gérez les demandes, les profils et les rendez-vous des prestataires.</p>
+        </div>
+        <a class="provider-welcome-action" href="/prestataires/en-attente">
+            <span aria-hidden="true">↗</span> Voir les demandes
+        </a>
+    </section>
+
+    <div class="provider-dashboard-error" data-dashboard-error role="alert" hidden>
+        <p data-dashboard-error-message></p>
+        <button type="button" data-retry>Réessayer</button>
+    </div>
+
+    <section class="provider-stats" aria-label="Indicateurs prestataires" aria-live="polite">
+        <article class="provider-stat-card is-total">
+            <span class="provider-stat-icon" aria-hidden="true">♙</span>
+            <div><span>Total des prestataires</span><strong data-stat="total">—</strong><small>Profils publiés et demandes enregistrées</small></div>
+        </article>
+        <article class="provider-stat-card is-pending">
+            <span class="provider-stat-icon" aria-hidden="true">◷</span>
+            <div><span>Nouvelles demandes</span><strong data-stat="pending">—</strong><small>À traiter</small></div>
+        </article>
+        <article class="provider-stat-card is-approved">
+            <span class="provider-stat-icon" aria-hidden="true">✓</span>
+            <div><span>Prestataires approuvés</span><strong data-stat="approved">—</strong><small>Profils enregistrés dans le catalogue</small></div>
+        </article>
+        <article class="provider-stat-card is-refused">
+            <span class="provider-stat-icon" aria-hidden="true">×</span>
+            <div><span>Prestataires refusés</span><strong data-stat="refused">—</strong><small>Demandes refusées</small></div>
+        </article>
+        <article class="provider-stat-card is-appointments">
+            <span class="provider-stat-icon" aria-hidden="true">▣</span>
+            <div><span>Rendez-vous demandés</span><strong data-stat="appointments">—</strong><small>En attente de traitement</small></div>
+        </article>
+        <article class="provider-stat-card is-booked">
+            <span class="provider-stat-icon" aria-hidden="true">↗</span>
+            <div><span>Prestataires réservés</span><strong data-stat="reserved">—</strong><small>Associés à un rendez-vous actif</small></div>
+        </article>
+        <article class="provider-stat-card is-taken">
+            <span class="provider-stat-icon" aria-hidden="true">—</span>
+            <div><span>Prestataires pris</span><strong data-stat="taken">—</strong><small>Marqués indisponibles</small></div>
+        </article>
+        <article class="provider-stat-card is-bookable">
+            <span class="provider-stat-icon" aria-hidden="true">◎</span>
+            <div><span>Profils réservables</span><strong data-stat="bookable">—</strong><small>Actuellement disponibles</small></div>
+        </article>
+    </section>
+
+    <section class="provider-section">
+        <div class="provider-section-heading">
+            <div>
+                <p class="provider-kicker">SUIVI DE L'ACTIVITÉ</p>
+                <h2>Accès rapides</h2>
+                <p>Retrouvez les demandes et gérez chaque étape du parcours prestataire.</p>
+            </div>
+        </div>
+        <div class="provider-shortcut-grid">
+            <a class="provider-shortcut is-highlight" href="/prestataires/en-attente">
+                <span class="provider-shortcut-icon" aria-hidden="true">◷</span>
+                <span class="provider-shortcut-copy"><strong>Nouvelles demandes</strong><small>Consultez les nouveaux profils et traitez les demandes reçues.</small><b><span data-shortcut-count="pending">—</span> demande(s) en attente</b></span>
+                <span class="provider-shortcut-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="provider-shortcut" href="/prestataires/approuves">
+                <span class="provider-shortcut-icon is-green" aria-hidden="true">✓</span>
+                <span class="provider-shortcut-copy"><strong>Prestataires approuvés</strong><small>Consultez les profils validés et gérez leurs informations.</small><b><span data-shortcut-count="approved">—</span> profil(s) au catalogue</b></span>
+                <span class="provider-shortcut-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="provider-shortcut" href="/prestataires/refuses">
+                <span class="provider-shortcut-icon is-red" aria-hidden="true">×</span>
+                <span class="provider-shortcut-copy"><strong>Prestataires refusés</strong><small>Consultez les demandes refusées et leur statut.</small><b><span data-shortcut-count="refused">—</span> demande(s) refusée(s)</b></span>
+                <span class="provider-shortcut-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="provider-shortcut" href="/prestataires/rendez-vous">
+                <span class="provider-shortcut-icon is-blue" aria-hidden="true">▣</span>
+                <span class="provider-shortcut-copy"><strong>Rendez-vous demandés</strong><small>Consultez les rendez-vous et gérez leur suivi jusqu'à la clôture.</small><b><span data-shortcut-count="appointments">—</span> en attente</b></span>
+                <span class="provider-shortcut-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="provider-shortcut" href="/prestataires/rendez-vous" data-reserved-shortcut>
+                <span class="provider-shortcut-icon is-violet" aria-hidden="true">↗</span>
+                <span class="provider-shortcut-copy"><strong>Prestataires réservés</strong><small>Suivez les profils liés à des rendez-vous confirmés ou en cours.</small><b><span data-shortcut-count="reserved">—</span> prestataire(s) concerné(s)</b></span>
+                <span class="provider-shortcut-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="provider-shortcut" href="/prestataires/reserves">
+                <span class="provider-shortcut-icon is-teal" aria-hidden="true">◎</span>
+                <span class="provider-shortcut-copy"><strong>Profils disponibles à la réservation</strong><small>La liste existante « réservés » affiche les profils actuellement réservables.</small><b><span data-shortcut-count="bookable">—</span> profil(s) disponible(s)</b></span>
+                <span class="provider-shortcut-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="provider-shortcut" href="/prestataires/pris">
+                <span class="provider-shortcut-icon is-gray" aria-hidden="true">—</span>
+                <span class="provider-shortcut-copy"><strong>Prestataires pris</strong><small>Consultez les profils momentanément indisponibles pour les clients.</small><b><span data-shortcut-count="taken">—</span> profil(s) indisponible(s)</b></span>
+                <span class="provider-shortcut-arrow" aria-hidden="true">→</span>
+            </a>
+        </div>
+    </section>
+
+    <section class="provider-section provider-add-section">
+        <div class="provider-section-heading">
+            <div>
+                <p class="provider-kicker">NOUVEAUX PROFILS</p>
+                <h2>Ajouter un prestataire</h2>
+                <p>Enregistrez un chauffeur ou une ménagère depuis le formulaire existant.</p>
+            </div>
+        </div>
+        <div class="provider-add-grid">
+            <a class="provider-add-card" href="/prestataires/ajouter?type=chauffeur">
+                <span class="provider-add-icon" aria-hidden="true">▰</span>
+                <span><strong>Ajouter un chauffeur</strong><small>Enregistrer un nouveau chauffeur.</small></span>
+                <b aria-hidden="true">→</b>
+            </a>
+            <a class="provider-add-card" href="/prestataires/ajouter?type=menagere">
+                <span class="provider-add-icon is-home" aria-hidden="true">⌂</span>
+                <span><strong>Ajouter une ménagère</strong><small>Enregistrer une nouvelle ménagère.</small></span>
+                <b aria-hidden="true">→</b>
+            </a>
+        </div>
+    </section>
+</main>
+<script src="/static/prestataires-dashboard-home.js"></script>
+</body>
+</html>

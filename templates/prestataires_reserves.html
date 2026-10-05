@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Prestataires disponibles</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell provider-available-page" data-available-providers-page
+    data-endpoint="/prestataires/api/disponibles">
+    <header class="provider-available-header">
+        <a class="provider-available-brand" href="/gestion/prestataires" aria-label="GOYING, dashboard prestataires">
+            <span class="provider-available-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>GESTION DES SERVICES</small></span>
+        </a>
+        <div class="provider-available-header-actions">
+            <button type="button" class="provider-available-refresh" data-available-refresh>
+                <span aria-hidden="true">↻</span> <span data-available-refresh-label>Actualiser</span>
+            </button>
+            <button type="button" class="provider-available-logout" data-available-logout>Déconnexion</button>
+        </div>
+    </header>
+
+    <nav class="provider-available-nav" aria-label="Navigation prestataires">
+        <a href="/gestion/prestataires">Dashboard</a>
+        <a href="/prestataires/en-attente">Nouvelles demandes</a>
+        <a href="/prestataires/approuves">Approuvés</a>
+        <a href="/prestataires/refuses">Refusés</a>
+        <a href="/prestataires/reserves" aria-current="page">Disponibles</a>
+        <a href="/prestataires/pris">Prestataires pris</a>
+        <a href="/prestataires/rendez-vous">Rendez-vous</a>
+    </nav>
+
+    <section class="provider-available-hero">
+        <div>
+            <p class="provider-available-kicker">ESPACE DE GESTION · PRESTATAIRES</p>
+            <h1>Prestataires disponibles</h1>
+            <p>Gérez les professionnels disponibles et consultez leurs profils avant réservation.</p>
+        </div>
+        <span class="provider-available-hero-icon" aria-hidden="true">◎</span>
+    </section>
+
+    <div class="provider-available-notice" data-available-notice role="status" aria-live="polite" hidden></div>
+    <div class="provider-available-error" data-available-error role="alert" hidden>
+        <div><strong>Impossible de charger les prestataires</strong><p>Une erreur est survenue lors de la récupération des données.</p></div>
+        <button type="button" data-available-retry>Réessayer</button>
+    </div>
+
+    <section class="provider-available-stats" aria-label="Statistiques des prestataires disponibles" aria-live="polite">
+        <article class="provider-available-stat">
+            <span class="provider-available-stat-icon is-green" aria-hidden="true">✓</span>
+            <div><small>Prestataires disponibles</small><strong data-available-stat="total">—</strong><p>Profils actuellement réservables</p></div>
+        </article>
+        <article class="provider-available-stat">
+            <span class="provider-available-stat-icon is-gold" aria-hidden="true">▦</span>
+            <div><small>Types de services</small><strong data-available-stat="types">—</strong><p>Types distincts dans la liste</p></div>
+        </article>
+        <article class="provider-available-stat">
+            <span class="provider-available-stat-icon is-blue" aria-hidden="true">⌕</span>
+            <div><small>Téléphones renseignés</small><strong data-available-stat="phones">—</strong><p>Profils avec numéro disponible</p></div>
+        </article>
+        <article class="provider-available-stat">
+            <span class="provider-available-stat-icon is-gray" aria-hidden="true">↻</span>
+            <div><small>Dernière actualisation</small><strong class="provider-available-time" data-available-updated>—</strong><p>Données chargées depuis le serveur</p></div>
+        </article>
+    </section>
+
+    <section class="provider-available-panel">
+        <div class="provider-available-toolbar">
+            <div>
+                <p class="provider-available-kicker">ANNUAIRE RÉSERVABLE</p>
+                <h2><span data-available-visible-count>—</span> prestataire(s)</h2>
+                <p data-available-summary>Chargement des prestataires disponibles…</p>
+            </div>
+            <div class="provider-available-filters">
+                <label class="provider-available-search">
+                    <span aria-hidden="true">⌕</span>
+                    <span class="provider-available-sr-only">Rechercher un prestataire</span>
+                    <input type="search" data-available-search placeholder="Nom, type, téléphone, e-mail ou description…" autocomplete="off">
+                    <button type="button" data-available-clear aria-label="Effacer la recherche" hidden>×</button>
+                </label>
+                <label>
+                    <span class="provider-available-sr-only">Filtrer par type</span>
+                    <select data-available-type>
+                        <option value="">Tous les types</option>
+                    </select>
+                </label>
+                <button type="button" class="provider-available-reset" data-available-reset hidden>Réinitialiser les filtres</button>
+            </div>
+        </div>
+
+        <div class="provider-available-grid" data-available-list aria-live="polite" aria-busy="true">
+            <div class="provider-available-skeleton" aria-hidden="true"></div>
+            <div class="provider-available-skeleton" aria-hidden="true"></div>
+            <div class="provider-available-skeleton" aria-hidden="true"></div>
+        </div>
+        <div class="provider-available-empty" data-available-empty hidden></div>
+    </section>
+</main>
+
+<dialog class="provider-available-dialog" data-available-details-dialog aria-labelledby="available-details-title">
+    <div class="provider-available-dialog-content">
+        <header>
+            <div><p class="provider-available-kicker">PROFIL PRESTATAIRE</p><h2 id="available-details-title">Détails du profil</h2></div>
+            <button type="button" class="provider-available-dialog-close" data-available-details-close aria-label="Fermer les détails">×</button>
+        </header>
+        <div data-available-details-body></div>
+    </div>
+</dialog>
+
+<dialog class="provider-available-dialog" data-available-confirm-dialog aria-labelledby="available-confirm-title">
+    <form method="dialog" class="provider-available-confirm-content">
+        <span class="provider-available-confirm-icon" data-available-confirm-icon aria-hidden="true">✓</span>
+        <p class="provider-available-kicker">CONFIRMATION</p>
+        <h2 id="available-confirm-title">Confirmer l'action</h2>
+        <p data-available-confirm-message></p>
+        <p class="provider-available-confirm-error" data-available-confirm-error role="alert" hidden></p>
+        <footer>
+            <button type="button" data-available-confirm-cancel>Annuler</button>
+            <button type="button" data-available-confirm-submit>Confirmer</button>
+        </footer>
+    </form>
+</dialog>
+
+<script src="/static/prestataires-disponibles.js"></script>
+</body>
+</html>

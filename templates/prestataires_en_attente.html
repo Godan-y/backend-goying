@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Nouvelles demandes</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell provider-pending-page" data-prestataires-page data-status="en_attente" data-endpoint="/prestataires/api/en-attente">
+    <header class="provider-pending-header">
+        <a class="provider-pending-brand" href="/gestion/prestataires" aria-label="GOYING, dashboard prestataires">
+            <span class="provider-pending-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>GESTION DES SERVICES</small></span>
+        </a>
+        <div class="provider-pending-header-actions">
+            <button type="button" class="provider-pending-refresh" id="refresh-prestataires">
+                <span aria-hidden="true">↻</span> Actualiser
+            </button>
+            <button type="button" class="provider-pending-logout" id="logout-button">Déconnexion</button>
+        </div>
+    </header>
+
+    <nav class="provider-pending-nav" aria-label="Navigation prestataires">
+        <a href="/gestion/prestataires">Dashboard</a>
+        <a href="/prestataires/en-attente" aria-current="page">Nouvelles demandes</a>
+        <a href="/prestataires/approuves">Approuvés</a>
+        <a href="/prestataires/refuses">Refusés</a>
+    </nav>
+
+    <section class="provider-pending-hero">
+        <div>
+            <p class="provider-pending-kicker">ESPACE DE GESTION · PRESTATAIRES</p>
+            <h1>Nouvelles demandes</h1>
+            <p>Prestataires en attente de validation</p>
+        </div>
+        <span class="provider-pending-status"><i aria-hidden="true"></i> Traitement des candidatures</span>
+    </section>
+
+    <div class="provider-pending-notice" data-provider-notice role="status" aria-live="polite" hidden></div>
+
+    <div class="provider-pending-error" data-provider-error role="alert" hidden>
+        <div>
+            <strong>Impossible de charger les demandes</strong>
+            <p data-provider-error-message>Une erreur est survenue lors du chargement des prestataires.</p>
+        </div>
+        <button type="button" data-provider-retry>Réessayer</button>
+    </div>
+
+    <section class="provider-pending-stats" aria-label="Statistiques des demandes" aria-live="polite">
+        <article class="provider-pending-stat">
+            <span class="provider-pending-stat-icon is-orange" aria-hidden="true">◷</span>
+            <div><small>En attente</small><strong id="prestataires-count">—</strong><p>Demandes reçues à examiner</p></div>
+        </article>
+        <article class="provider-pending-stat">
+            <span class="provider-pending-stat-icon is-blue" aria-hidden="true">✓</span>
+            <div><small>À traiter</small><strong data-provider-action-count>—</strong><p>Demandes nécessitant une décision</p></div>
+        </article>
+        <article class="provider-pending-stat">
+            <span class="provider-pending-stat-icon is-gray" aria-hidden="true">↻</span>
+            <div><small>Dernière actualisation</small><strong class="provider-pending-time" data-provider-updated>—</strong><p>Données chargées depuis le serveur</p></div>
+        </article>
+    </section>
+
+    <section class="provider-pending-list-section">
+        <div class="provider-pending-list-heading">
+            <div>
+                <p class="provider-pending-kicker">CANDIDATURES</p>
+                <h2>Prestataires en attente de validation</h2>
+                <p>Consultez chaque profil avant d'approuver ou de refuser la demande.</p>
+            </div>
+            <label class="provider-pending-search">
+                <span aria-hidden="true">⌕</span>
+                <span class="provider-sr-only">Rechercher un prestataire</span>
+                <input type="search" data-provider-search placeholder="Rechercher nom, email, téléphone ou type…" autocomplete="off">
+            </label>
+        </div>
+        <div id="prestataires-list" class="provider-pending-grid" aria-live="polite">
+            <div class="provider-pending-skeleton" aria-hidden="true"></div>
+            <div class="provider-pending-skeleton" aria-hidden="true"></div>
+            <div class="provider-pending-skeleton" aria-hidden="true"></div>
+        </div>
+    </section>
+</main>
+
+<dialog class="provider-pending-dialog" data-provider-details-dialog aria-labelledby="provider-details-title">
+    <div class="provider-pending-dialog-content">
+        <header>
+            <div><p class="provider-pending-kicker">PROFIL PRESTATAIRE</p><h2 id="provider-details-title">Détails de la demande</h2></div>
+            <button type="button" class="provider-pending-dialog-close" data-provider-details-close aria-label="Fermer les détails">×</button>
+        </header>
+        <div data-provider-details-body></div>
+    </div>
+</dialog>
+
+<dialog class="provider-pending-dialog" data-provider-confirm-dialog aria-labelledby="provider-confirm-title">
+    <form method="dialog" class="provider-pending-confirm-content" data-provider-confirm-form>
+        <span class="provider-pending-confirm-icon" aria-hidden="true" data-provider-confirm-icon>✓</span>
+        <p class="provider-pending-kicker">CONFIRMATION</p>
+        <h2 id="provider-confirm-title">Confirmer la décision</h2>
+        <p data-provider-confirm-message></p>
+        <div class="provider-pending-confirm-error" data-provider-confirm-error role="alert" hidden></div>
+        <div class="provider-pending-confirm-actions">
+            <button type="button" data-provider-confirm-cancel>Annuler</button>
+            <button type="button" data-provider-confirm-submit>Confirmer</button>
+        </div>
+    </form>
+</dialog>
+
+<script src="/static/prestataires-dashboard.js"></script>
+</body>
+</html>

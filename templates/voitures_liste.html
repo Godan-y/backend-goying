@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>Goying - Gestion du parc automobile</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell fleet-page" data-vehicles-page data-endpoint="/api/voitures">
+    <header class="topbar">
+        <div>
+            <p class="eyebrow fleet-brand">GOYING <span>·</span> AUTO</p>
+            <h1>Gestion du parc automobile</h1>
+            <p class="status-text">Consultez, gérez et contrôlez la disponibilité de vos véhicules.</p>
+        </div>
+        <nav class="toplinks" aria-label="Navigation voitures">
+            <a href="/gestion/voitures">Dashboard</a>
+            <a class="fleet-add-link" href="/voitures/ajouter">+ Ajouter une voiture à louer</a>
+            <button class="nav-button" type="button" id="logout-button">Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="fleet-stats" aria-label="Statistiques du parc automobile" aria-live="polite">
+        <article class="fleet-stat-card">
+            <span class="fleet-stat-icon fleet-stat-total" aria-hidden="true">▣</span>
+            <div><p>Total des véhicules</p><strong id="vehicles-total">—</strong></div>
+        </article>
+        <article class="fleet-stat-card">
+            <span class="fleet-stat-icon fleet-stat-available" aria-hidden="true">✓</span>
+            <div><p>Disponibles</p><strong id="vehicles-available">—</strong></div>
+        </article>
+        <article class="fleet-stat-card">
+            <span class="fleet-stat-icon fleet-stat-unavailable" aria-hidden="true">—</span>
+            <div><p>Indisponibles</p><strong id="vehicles-unavailable">—</strong></div>
+        </article>
+    </section>
+
+    <section class="management-panel">
+        <div class="status-toolbar">
+            <div>
+                <div><p class="eyebrow">Votre flotte</p><h2><span id="vehicles-count">—</span> véhicule(s) enregistré(s)</h2></div>
+            </div>
+            <button type="button" id="refresh-vehicles" class="secondary-button">
+                <span class="fleet-refresh-icon" aria-hidden="true">↻</span>
+                <span data-refresh-label>Actualiser</span>
+            </button>
+        </div>
+        <p id="vehicles-feedback" class="fleet-feedback" role="status" aria-live="polite"></p>
+        <div id="vehicles-list" class="vehicles-grid" aria-live="polite" aria-busy="true">
+            <article class="fleet-skeleton-card" aria-hidden="true">
+                <span class="fleet-skeleton fleet-skeleton-image"></span>
+                <span class="fleet-skeleton fleet-skeleton-line"></span>
+                <span class="fleet-skeleton fleet-skeleton-line is-short"></span>
+                <span class="fleet-skeleton fleet-skeleton-details"></span>
+            </article>
+            <article class="fleet-skeleton-card" aria-hidden="true">
+                <span class="fleet-skeleton fleet-skeleton-image"></span>
+                <span class="fleet-skeleton fleet-skeleton-line"></span>
+                <span class="fleet-skeleton fleet-skeleton-line is-short"></span>
+                <span class="fleet-skeleton fleet-skeleton-details"></span>
+            </article>
+            <article class="fleet-skeleton-card" aria-hidden="true">
+                <span class="fleet-skeleton fleet-skeleton-image"></span>
+                <span class="fleet-skeleton fleet-skeleton-line"></span>
+                <span class="fleet-skeleton fleet-skeleton-line is-short"></span>
+                <span class="fleet-skeleton fleet-skeleton-details"></span>
+            </article>
+        </div>
+    </section>
+</main>
+<dialog class="fleet-delete-dialog" id="fleet-delete-dialog" aria-labelledby="fleet-delete-title">
+    <form method="dialog" class="fleet-delete-content">
+        <span class="fleet-delete-icon" aria-hidden="true">!</span>
+        <h2 id="fleet-delete-title">Supprimer ce véhicule ?</h2>
+        <p>Cette action supprimera définitivement <strong id="fleet-delete-name">ce véhicule</strong> de la flotte ainsi que ses photos.</p>
+        <p class="fleet-delete-error" id="fleet-delete-error" role="alert" hidden></p>
+        <div class="fleet-delete-actions">
+            <button type="submit" value="cancel" id="fleet-delete-cancel">Annuler</button>
+            <button type="button" id="fleet-delete-confirm">Supprimer</button>
+        </div>
+    </form>
+</dialog>
+<script src="/static/voitures-liste.js"></script>
+</body>
+</html>

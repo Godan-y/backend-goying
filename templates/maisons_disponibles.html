@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Maisons disponibles</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell available-houses-page">
+    <header class="available-houses-header">
+        <a class="available-houses-brand" href="/dashboard/maisons" aria-label="GOYING, tableau de bord immobilier">
+            <span class="available-houses-brand-mark" aria-hidden="true">G</span>
+            <span><strong>GOYING</strong><small>GESTION IMMOBILIÈRE</small></span>
+        </a>
+        <nav class="available-houses-nav" aria-label="Navigation immobilière">
+            <a href="/dashboard/maisons">Dashboard</a>
+            <a class="is-primary" href="/maisons/ajouter"><span aria-hidden="true">＋</span> Ajouter</a>
+            <a href="/maisons/prises"><span aria-hidden="true">⌂</span> Vendues / louées</a>
+        </nav>
+    </header>
+
+    <section class="available-houses-hero">
+        <div>
+            <p class="available-houses-kicker"><span aria-hidden="true">⌂</span> ESPACE D’ADMINISTRATION</p>
+            <h1>Maisons disponibles</h1>
+            <p>Maisons actuellement disponibles</p>
+        </div>
+        <div class="available-houses-online"><span aria-hidden="true"></span> En ligne</div>
+    </section>
+
+    <section class="available-houses-panel" aria-labelledby="available-houses-count-label">
+        <div class="available-houses-toolbar">
+            <div class="available-houses-count">
+                <span id="compteur-maisons" aria-live="polite">—</span>
+                <div><strong id="available-houses-count-label">Maisons disponibles</strong><small>Biens actuellement proposés</small></div>
+            </div>
+            <button type="button" id="actualiser-maisons" class="available-houses-refresh">
+                <span aria-hidden="true">↻</span> Actualiser
+            </button>
+        </div>
+        <div id="liste-maisons-disponibles" class="maisons available-houses-grid" aria-live="polite" aria-busy="true">
+            <div class="available-houses-loading"><span aria-hidden="true"></span><p>Chargement des maisons…</p></div>
+        </div>
+    </section>
+</main>
+<script src="/static/maisons.js"></script>
+<script src="/static/house-admin-actions.js"></script>
+</body>
+</html>

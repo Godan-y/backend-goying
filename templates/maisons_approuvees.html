@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GOYING - Maisons approuvées</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+{% set approved_count = maisons|length %}
+{% set ns = namespace(available=0, unavailable=0, rent=0, sale=0) %}
+{% for maison in maisons %}
+    {% set availability = maison.get('disponibilite') or (maison.get('statut') if maison.get('statut') in ['disponible', 'indisponible'] else '') %}
+    {% if availability == 'disponible' %}{% set ns.available = ns.available + 1 %}{% endif %}
+    {% if availability == 'indisponible' %}{% set ns.unavailable = ns.unavailable + 1 %}{% endif %}
+    {% if maison.get('type') in ['a_louer', 'louer', 'location'] %}{% set ns.rent = ns.rent + 1 %}{% endif %}
+    {% if maison.get('type') in ['a_vendre', 'vendre', 'vente'] %}{% set ns.sale = ns.sale + 1 %}{% endif %}
+{% endfor %}
+
+<main class="shell approved-houses-page" data-approved-houses-page>
+    <header class="approved-houses-header">
+        <div class="approved-houses-brand">
+            <span class="approved-houses-mark" aria-hidden="true">G</span>
+            <span>GOYING <small>IMMOBILIER</small></span>
+        </div>
+        <div class="approved-houses-heading">
+            <div>
+                <p class="approved-houses-kicker">ESPACE D'ADMINISTRATION</p>
+                <h1>Maisons approuvées</h1>
+                <p class="approved-houses-subtitle">Maisons validées par l'administration</p>
+            </div>
+            <nav class="approved-houses-nav" aria-label="Navigation maisons">
+                <a class="approved-nav-secondary" href="/dashboard/maisons">Dashboard</a>
+                <a class="approved-nav-primary" href="/maisons">Maisons ajoutées</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="approved-houses-stats" aria-label="Statistiques des maisons approuvées">
+        <article class="approved-stat-card">
+            <span class="approved-stat-icon is-total" aria-hidden="true">⌂</span>
+            <div><span>Total approuvées</span><strong data-stat="total">{{ approved_count }}</strong></div>
+        </article>
+        <article class="approved-stat-card">
+            <span class="approved-stat-icon is-available" aria-hidden="true">✓</span>
+            <div><span>Disponibles</span><strong data-stat="available">{{ ns.available }}</strong></div>
+        </article>
+        <article class="approved-stat-card">
+            <span class="approved-stat-icon is-unavailable" aria-hidden="true">—</span>
+            <div><span>Indisponibles</span><strong data-stat="unavailable">{{ ns.unavailable }}</strong></div>
+        </article>
+        <article class="approved-stat-card">
+            <span class="approved-stat-icon is-rent" aria-hidden="true">↗</span>
+            <div><span>À louer</span><strong data-stat="rent">{{ ns.rent }}</strong></div>
+        </article>
+        <article class="approved-stat-card">
+            <span class="approved-stat-icon is-sale" aria-hidden="true">$</span>
+            <div><span>À vendre</span><strong data-stat="sale">{{ ns.sale }}</strong></div>
+        </article>
+    </section>
+
+    {% if error %}
+    <section class="approved-houses-error" role="alert">
+        <div><strong>Chargement impossible</strong><p>{{ error }}</p></div>
+        <a href="/maisons/approuvees">Réessayer</a>
+    </section>
+    {% endif %}
+
+    <section class="approved-houses-panel" aria-label="Liste des maisons approuvées">
+        <div class="approved-list-heading">
+            <div>
+                <p class="approved-houses-kicker">PORTefeuille IMMOBILIER</p>
+                <h2><span data-visible-count>{{ approved_count }}</span> propriété(s)</h2>
+            </div>
+            <a class="approved-refresh" href="/maisons/approuvees">Actualiser</a>
+        </div>
+
+        <div class="approved-houses-filters">
+            <label class="approved-search">
+                <span aria-hidden="true">⌕</span>
+                <span class="visually-hidden">Rechercher une maison</span>
+                <input type="search" data-search-houses placeholder="Titre, localisation ou type…" autocomplete="off">
+            </label>
+            <label>
+                <span class="visually-hidden">Filtrer les maisons approuvées</span>
+                <select data-filter-houses>
+                    <option value="all">Toutes les maisons approuvées</option>
+                    <option value="available">Disponibles</option>
+                    <option value="unavailable">Indisponibles</option>
+                    <option value="rent">À louer</option>
+                    <option value="sale">À vendre</option>
+                </select>
+            </label>
+            <label>
+                <span class="visually-hidden">Trier les maisons</span>
+                <select data-sort-houses>
+                    <option value="date-desc">Plus récentes</option>
+                    <option value="date-asc">Plus anciennes</option>
+                    <option value="price-asc">Prix croissant</option>
+                    <option value="price-desc">Prix décroissant</option>
+                </select>
+            </label>
+        </div>
+
+        <p class="approved-houses-feedback" data-feedback role="status" aria-live="polite"></p>
+
+        <div class="approved-houses-grid" data-houses-list>
+            {% for maison in maisons %}
+                {% set photos = maison.get('photo_urls') or ([maison.get('photo_url')] if maison.get('photo_url') else []) %}
+                {% set availability = maison.get('disponibilite') or (maison.get('statut') if maison.get('statut') in ['disponible', 'indisponible'] else '') %}
+                {% set transaction = maison.get('type') or '' %}
+                {% set property_type = maison.get('type_maison') or maison.get('type_bien') or '' %}
+                {% set location_parts = [maison.get('commune'), maison.get('quartier'), maison.get('province'), maison.get('pays')] %}
+                {% set location = location_parts|select|join(', ') %}
+                {% set extras = maison.get('informations_complementaires') or '' %}
+                {% set custom_information = maison.get('informations_personnalisees') or [] %}
+                {% set display_date = maison.get('approvedAt') or maison.get('date_approbation') or maison.get('createdAt') or maison.get('date_ajout') %}
+                <article class="approved-house-card"
+                    data-house-card
+                    data-house-id="{{ maison.id }}"
+                    data-house-title="{{ maison.get('titre') or 'Bien immobilier' }}"
+                    data-search="{{ [maison.get('titre'), property_type, location, maison.get('avenue')]|select|join(' ')|lower }}"
+                    data-availability="{{ availability|lower }}"
+                    data-transaction="{{ transaction|lower }}"
+                    data-price="{{ maison.get('prix') if maison.get('prix') is not none else '' }}"
+                    data-date="{{ display_date|string if display_date else '' }}">
+                    <div class="approved-house-gallery" data-gallery>
+                        {% if photos %}
+                            {% for photo in photos %}
+                                <button class="approved-gallery-photo{% if loop.first %} is-active{% endif %}"
+                                    type="button" data-gallery-photo {% if not loop.first %}hidden{% endif %}
+                                    aria-label="Agrandir la photo {{ loop.index }} de {{ photos|length }} de {{ maison.get('titre') or 'la maison' }}">
+                                    <img src="{{ photo }}" alt="Photo {{ loop.index }} de {{ maison.get('titre') or 'la maison' }}" loading="lazy">
+                                </button>
+                            {% endfor %}
+                            <div class="approved-photo-fallback" aria-hidden="true">Photo indisponible</div>
+                            {% if photos|length > 1 %}
+                                <button type="button" class="approved-gallery-arrow is-prev" data-gallery-step="-1" aria-label="Photo précédente">‹</button>
+                                <button type="button" class="approved-gallery-arrow is-next" data-gallery-step="1" aria-label="Photo suivante">›</button>
+                                <span class="approved-photo-count" data-photo-count>1 / {{ photos|length }}</span>
+                            {% endif %}
+                        {% else %}
+                            <div class="approved-photo-fallback is-visible">Aucune photo disponible</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="approved-house-content">
+                        <div class="approved-house-title-row">
+                            <div class="approved-house-title">
+                                <p class="approved-property-type">{{ property_type or 'Bien immobilier' }}</p>
+                                <h3>{{ maison.get('titre') or 'Bien sans titre' }}</h3>
+                            </div>
+                            <div class="approved-badges">
+                                <span class="approved-badge is-approved">Approuvée</span>
+                                {% if availability == 'disponible' %}
+                                    <span class="approved-badge is-available" data-availability-label>Disponible</span>
+                                {% elif availability == 'indisponible' %}
+                                    <span class="approved-badge is-unavailable" data-availability-label>Indisponible</span>
+                                {% else %}
+                                    <span class="approved-badge is-unknown" data-availability-label>Disponibilité non renseignée</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <p class="approved-price">
+                            {% if maison.get('prix') is not none and maison.get('prix') != '' %}
+                                <span data-price-value>{{ maison.get('prix') }}</span>{% if maison.get('devise') or maison.get('currency') %} {{ maison.get('devise') or maison.get('currency') }}{% endif %}
+                            {% else %}Prix non renseigné{% endif %}
+                            {% if maison.get('type') in ['a_louer', 'louer', 'location'] %}<small>par période de location</small>{% endif %}
+                        </p>
+
+                        <div class="approved-house-facts">
+                            {% if location %}<p><span aria-hidden="true">⌖</span><strong>Localisation</strong>{{ location }}</p>{% endif %}
+                            {% if maison.get('avenue') %}<p><span aria-hidden="true">⌖</span><strong>Avenue</strong>{{ maison.get('avenue') }}</p>{% endif %}
+                            {% if maison.get('chambres') is not none and maison.get('chambres') != '' %}<p><span aria-hidden="true">▦</span><strong>Chambres</strong>{{ maison.get('chambres') }}</p>{% endif %}
+                            {% if maison.get('salles_bains') is not none and maison.get('salles_bains') != '' %}<p><span aria-hidden="true">◌</span><strong>Salles de bains</strong>{{ maison.get('salles_bains') }}</p>{% endif %}
+                            {% if maison.get('superficie') %}<p><span aria-hidden="true">□</span><strong>Superficie</strong>{{ maison.get('superficie') }}</p>{% endif %}
+                            {% if transaction in ['a_louer', 'louer', 'location'] %}
+                                <p><span aria-hidden="true">↗</span><strong>Transaction</strong>À louer</p>
+                            {% elif transaction in ['a_vendre', 'vendre', 'vente'] %}
+                                <p><span aria-hidden="true">$</span><strong>Transaction</strong>À vendre</p>
+                            {% endif %}
+                            {% if display_date %}
+                                <p class="approved-house-date"><span aria-hidden="true">◷</span><strong>{% if maison.get('approvedAt') or maison.get('date_approbation') %}Approuvée le{% else %}Ajoutée le{% endif %}</strong><time data-format-date>{{ display_date|string }}</time></p>
+                            {% endif %}
+                        </div>
+
+                        {% if maison.get('description') %}
+                        <section class="approved-house-detail">
+                            <h4>Description</h4>
+                            <p>{{ maison.get('description') }}</p>
+                        </section>
+                        {% endif %}
+                        {% if extras or custom_information %}
+                        <section class="approved-house-detail">
+                            <h4>Informations complémentaires</h4>
+                            {% if extras %}<div class="approved-expandable" data-expandable>{{ extras }}</div>{% endif %}
+                            {% if custom_information %}
+                            <dl class="approved-custom-facts">
+                                {% for information in custom_information %}
+                                    {% if information is mapping and (information.get('nom') or information.get('valeur')) %}
+                                    <div><dt>{{ information.get('nom') or 'Information' }}</dt><dd>{{ information.get('valeur') or '' }}</dd></div>
+                                    {% endif %}
+                                {% endfor %}
+                            </dl>
+                            {% endif %}
+                            {% if extras and extras|string|length > 180 %}<button class="approved-expand-button" type="button" data-expand-toggle>Voir plus</button>{% endif %}
+                        </section>
+                        {% endif %}
+
+                        <div class="approved-house-actions">
+                            {% if availability in ['disponible', 'indisponible'] %}
+                            <button class="approved-action-availability" type="button" data-availability-action
+                                data-next-status="{{ 'indisponible' if availability == 'disponible' else 'disponible' }}">
+                                {{ 'Rendre indisponible' if availability == 'disponible' else 'Rendre disponible' }}
+                            </button>
+                            {% endif %}
+                            <a class="approved-action-edit" href="/maisons/{{ maison.id }}/modifier">Modifier</a>
+                            <button class="approved-action-delete" type="button" data-delete-house>Supprimer</button>
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+
+        <div class="approved-houses-empty" data-empty-state {% if maisons %}hidden{% endif %}>
+            {% if error %}
+                <h2>Liste indisponible</h2><p>Réessayez de charger les maisons approuvées.</p>
+                <a href="/maisons/approuvees">Réessayer</a>
+            {% else %}
+                <span aria-hidden="true">⌂</span><h2>Aucune maison approuvée</h2>
+                <p>Les maisons validées par l'administration apparaîtront ici.</p>
+            {% endif %}
+        </div>
+        <p class="approved-houses-empty" data-no-results hidden>Aucun bien ne correspond à votre recherche ou à vos filtres.</p>
+    </section>
+</main>
+
+<dialog class="approved-photo-dialog" data-photo-dialog aria-label="Photo agrandie">
+    <button type="button" class="approved-dialog-close" data-close-photo aria-label="Fermer">×</button>
+    <button type="button" class="approved-dialog-arrow is-prev" data-dialog-step="-1" aria-label="Photo précédente">‹</button>
+    <img data-dialog-image alt="">
+    <button type="button" class="approved-dialog-arrow is-next" data-dialog-step="1" aria-label="Photo suivante">›</button>
+    <p data-dialog-caption></p>
+</dialog>
+
+<dialog class="approved-confirm-dialog" data-delete-dialog aria-labelledby="approved-delete-title">
+    <form method="dialog" class="approved-confirm-content">
+        <span class="approved-confirm-icon" aria-hidden="true">!</span>
+        <h2 id="approved-delete-title">Confirmer la suppression</h2>
+        <p>Voulez-vous vraiment supprimer <strong data-delete-title>ce bien immobilier</strong> ? Cette action supprime le bien et ses photos associées et peut être irréversible.</p>
+        <p class="approved-dialog-error" data-delete-error role="alert" hidden></p>
+        <div class="approved-confirm-actions">
+            <button type="submit" value="cancel">Annuler</button>
+            <button type="button" data-confirm-delete>Confirmer la suppression</button>
+        </div>
+    </form>
+</dialog>
+<script src="/static/maisons-approuvees.js"></script>
+</body>
+</html>

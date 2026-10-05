@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Gestion des voitures</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell car-dashboard" data-car-dashboard data-dashboard-url="/dashboard/voitures">
+    <header class="car-dashboard-header">
+        <a class="car-dashboard-brand" href="/" aria-label="GOYING, accueil">
+            <span class="car-dashboard-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>GESTION DE FLOTTE</small></span>
+        </a>
+        <nav class="car-dashboard-nav" aria-label="Navigation voitures">
+            <a href="/gestion/voitures" aria-current="page">Dashboard</a>
+            <a href="/voitures/liste">Gestion des voitures</a>
+            <a href="/voitures/reservations">Réservations</a>
+            <a href="/voitures/reservations/historique">Historique</a>
+            <a href="/voitures/ventes">Annonces de vente</a>
+            <a href="/voitures/demandes-achat">Demandes d'achat</a>
+            <a href="/voitures/soumissions">Soumissions utilisateurs</a>
+            <a href="/voitures/vente/ajouter">Vente de voitures</a>
+            <button type="button" data-car-logout>Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="car-dashboard-hero">
+        <div>
+            <p class="car-dashboard-kicker">ESPACE DE GESTION · AUTOMOBILE</p>
+            <h1>Gestion des voitures</h1>
+            <p>Gérez votre flotte automobile, les disponibilités et les réservations.</p>
+        </div>
+        <a class="car-dashboard-primary" href="/voitures/ajouter"><span aria-hidden="true">＋</span> Ajouter une voiture à louer</a>
+    </section>
+
+    <section class="car-dashboard-access" aria-label="Statut de connexion">
+        <span class="car-access-check" aria-hidden="true">✓</span>
+        <div><strong>Accès autorisé</strong><p>Vous êtes connecté à l'espace de gestion des voitures.</p></div>
+        <span class="car-access-role"><i aria-hidden="true"></i> Gestionnaire voitures</span>
+    </section>
+
+    <div class="car-dashboard-error" data-car-dashboard-error role="alert" hidden>
+        <p data-car-error-message></p>
+        <button type="button" data-car-retry>Réessayer</button>
+    </div>
+
+    <section class="car-dashboard-stats" aria-label="Statistiques du parc automobile" aria-live="polite">
+        <article class="car-dashboard-stat is-total">
+            <span aria-hidden="true">▣</span><div><small>Total des voitures</small><strong data-car-stat="total">—</strong><p>Véhicules enregistrés</p></div>
+        </article>
+        <article class="car-dashboard-stat is-available">
+            <span aria-hidden="true">✓</span><div><small>Disponibles</small><strong data-car-stat="available">—</strong><p>Selon leur disponibilité</p></div>
+        </article>
+        <article class="car-dashboard-stat is-unavailable">
+            <span aria-hidden="true">—</span><div><small>Indisponibles</small><strong data-car-stat="unavailable">—</strong><p>Selon leur disponibilité</p></div>
+        </article>
+        <article class="car-dashboard-stat is-bookings">
+            <span aria-hidden="true">▤</span><div><small>Réservations à gérer</small><strong data-car-stat="activeBookings">—</strong><p>En attente, confirmées ou en cours</p></div>
+        </article>
+        <article class="car-dashboard-stat is-pending">
+            <span aria-hidden="true">◷</span><div><small>Réservations à venir</small><strong data-car-stat="upcomingBookings">—</strong><p>Demandes actives avec date future</p></div>
+        </article>
+        <article class="car-dashboard-stat is-progress">
+            <span aria-hidden="true">↗</span><div><small>Locations en cours</small><strong data-car-stat="inProgressBookings">—</strong><p>Statut « En cours »</p></div>
+        </article>
+    </section>
+
+    <section class="car-dashboard-section">
+        <div class="car-dashboard-section-heading">
+            <div><p class="car-dashboard-kicker">VÉHICULES ET DISPONIBILITÉ</p><h2>Gestion de la flotte</h2><p>Retrouvez vos véhicules et leur disponibilité enregistrée.</p></div>
+        </div>
+        <div class="car-dashboard-manage-grid">
+            <a class="car-dashboard-manage-card is-featured" href="/voitures/liste">
+                <span class="car-manage-icon" aria-hidden="true">▣</span>
+                <span><strong>Parc des voitures à louer</strong><small>Consulter, modifier et gérer les voitures proposées à la location.</small><b><span data-car-stat="total">—</span> véhicule(s)</b></span>
+                <span class="car-manage-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="car-dashboard-manage-card" href="/voitures/ajouter">
+                <span class="car-manage-icon is-add" aria-hidden="true">＋</span>
+                <span><strong>Ajouter une voiture à louer</strong><small>Enregistrer un nouveau véhicule dans la flotte de location.</small><b>Ouvrir le formulaire</b></span>
+                <span class="car-manage-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="car-dashboard-manage-card" href="/voitures/vente/ajouter">
+                <span class="car-manage-icon is-sale" aria-hidden="true">$</span>
+                <span><strong>Ajouter une voiture à vendre</strong><small>Créer une annonce de vente avec les informations du vendeur.</small><b>Ajouter une annonce</b></span>
+                <span class="car-manage-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="car-dashboard-manage-card" href="/voitures/ventes">
+                <span class="car-manage-icon is-sale" aria-hidden="true">▤</span>
+                <span><strong>Annonces de vente</strong><small>Afficher les voitures en vente, leurs prix et les contacts des vendeurs.</small><b>Consulter les annonces</b></span>
+                <span class="car-manage-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="car-dashboard-manage-card" href="/voitures/demandes-achat">
+                <span class="car-manage-icon is-sale" aria-hidden="true">⌕</span>
+                <span><strong>Demandes d'achat</strong><small>Consulter les demandes et les coordonnées des acheteurs de voitures.</small><b>Afficher les demandes</b></span>
+                <span class="car-manage-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="car-dashboard-manage-card" href="/voitures/soumissions">
+                <span class="car-manage-icon is-sale" aria-hidden="true">▤</span>
+                <span><strong>Soumissions utilisateurs</strong><small>Consulter les voitures proposées et les coordonnées de leurs propriétaires.</small><b>Afficher les soumissions</b></span>
+                <span class="car-manage-arrow" aria-hidden="true">→</span>
+            </a>
+        </div>
+        <p class="car-dashboard-note"><strong>À propos des validations :</strong> les fiches de la collection actuelle <code>vehicles</code> enregistrent les caractéristiques et <code>isAvailable</code>, mais pas de statut « nouvelle », « approuvée » ou « refusée ». Ces compteurs ne sont donc pas affichés comme s’ils existaient.</p>
+    </section>
+
+    <section class="car-dashboard-section">
+        <div class="car-dashboard-section-heading">
+            <div><p class="car-dashboard-kicker">SUIVI DES LOCATIONS</p><h2>Actions rapides</h2><p>Gérez les demandes actives ou consultez les dossiers clôturés.</p></div>
+        </div>
+        <div class="car-dashboard-action-grid">
+            <a class="car-dashboard-action-card" href="/voitures/reservations">
+                <span class="car-action-icon is-booking" aria-hidden="true">▤</span>
+                <span><strong>Gérer les réservations de location</strong><small>Consultez les demandes, locations confirmées et locations en cours.</small><b><span data-car-stat="activeBookings">—</span> réservation(s) à gérer</b></span>
+                <span class="car-manage-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="car-dashboard-action-card" href="/voitures/reservations/historique">
+                <span class="car-action-icon is-history" aria-hidden="true">◷</span>
+                <span><strong>Historique des locations et ventes</strong><small>Consultez les locations terminées ou annulées et les ventes clôturées.</small><b>Voir l'historique</b></span>
+                <span class="car-manage-arrow" aria-hidden="true">→</span>
+            </a>
+        </div>
+    </section>
+
+    <section class="car-dashboard-section car-dashboard-previews">
+        <div class="car-dashboard-section-heading car-preview-heading">
+            <div><p class="car-dashboard-kicker">DERNIÈRES ACTIVITÉS</p><h2>Véhicules et réservations récents</h2><p>Un aperçu des données actuellement chargées depuis les API protégées.</p></div>
+            <button type="button" class="car-dashboard-refresh" data-car-refresh><span aria-hidden="true">↻</span> Actualiser</button>
+        </div>
+        <div class="car-dashboard-preview-columns">
+            <section class="car-preview-panel" aria-labelledby="recent-vehicles-heading">
+                <div class="car-preview-panel-heading"><h3 id="recent-vehicles-heading">Véhicules récents</h3><a href="/voitures/liste">Voir le parc →</a></div>
+                <div class="car-preview-list" data-recent-vehicles><div class="car-preview-loading">Chargement des véhicules…</div></div>
+            </section>
+            <section class="car-preview-panel" aria-labelledby="recent-bookings-heading">
+                <div class="car-preview-panel-heading"><h3 id="recent-bookings-heading">Réservations de location récentes</h3><a href="/voitures/reservations">Voir toutes →</a></div>
+                <div class="car-preview-list" data-recent-bookings><div class="car-preview-loading">Chargement des réservations…</div></div>
+            </section>
+        </div>
+    </section>
+</main>
+<script src="/static/voitures-dashboard.js"></script>
+</body>
+</html>
