@@ -181,7 +181,7 @@ async def _upload_images(
 
 
 @router.get("/api/voitures")
-def lister_voitures(_gestionnaire: dict = Depends(require_role("voitures"))):
+def lister_voitures():
     try:
         vehicles = []
         for document in db.collection("vehicles").stream():
@@ -726,9 +726,7 @@ async def ajouter_annonce_vente_voiture(
 
 
 @router.get("/api/voitures/ventes")
-def lister_annonces_vente_voitures(
-    _gestionnaire: dict = Depends(require_role("voitures")),
-):
+def lister_annonces_vente_voitures():
     try:
         sales = []
         for document in db.collection("vehicleSales").stream():

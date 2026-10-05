@@ -118,8 +118,10 @@ Collection `prestataires` :
 - `GET /dashboard/prestataires` avec un token de rôle `prestataires`
 - `GET /dashboard/maisons` avec un token de rôle `maisons`
 - `GET /dashboard/voitures` avec un token de rôle `voitures`
+- `GET /api/voitures` catalogue public des voitures à louer, sans authentification
+- `GET /api/voitures/ventes` catalogue public des annonces de voitures à vendre, sans authentification
 - `POST /api/voitures/ventes` avec un token de rôle `voitures` (photos dans S3, annonce dans `vehicleSales`)
-- `GET /api/voitures/ventes` avec un token de rôle `voitures`
+- Les opérations de gestion, réservations, demandes d'achat et soumissions automobiles restent protégées par un token de rôle `voitures`
 - `GET /api/voitures/demandes-achat` avec un token de rôle `voitures`
 - `GET /api/voitures/soumissions` avec un token de rôle `voitures`
 - `GET /prestataires/en-attente` avec un token de rôle `prestataires`
