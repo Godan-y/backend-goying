@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const page = document.querySelector('[data-provider-form]');
     const form = document.querySelector('#provider-form');
+    const photoEditor = window.initializeProviderPhotoEditor(
+        document.querySelector('[data-provider-photo-editor]'),
+    );
+    const photoError = document.querySelector('[data-provider-photo-error]');
     const status = document.querySelector('#form-status');
     const logoutButton = document.querySelector('#logout-button');
     const submitButton = document.querySelector('[data-provider-submit]');
@@ -141,6 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
             status.classList.add('is-error');
             return;
         }
+        if (photoError.textContent) {
+            status.className = 'provider-form-message is-error';
+            status.textContent = photoError.textContent;
+            return;
+        }
         if (!await validatePhone(true)) {
             phoneInput.focus();
             return;
@@ -155,33 +164,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const formData = new FormData(form);
         try {
+            const photoData = await photoEditor.readDataUrl();
+            const profile = {
+                nom: formData.get('nom'),
+                post_nom: formData.get('post_nom') || '',
+                prenom: formData.get('prenom') || '',
+                telephone: phoneNormalized.value,
+                indicatif_telephone: phoneCallingCode.value,
+                region_telephone: phoneRegion.value,
+                description: formData.get('description') || '',
+                pays: formData.get('pays') || '',
+                ville: formData.get('ville') || '',
+                commune: formData.get('commune') || '',
+                annees_experience: formData.get('annees_experience') || '',
+                competences: formData.get('competences') || '',
+                tarif_mensuel: formData.get('tarif_mensuel') || '',
+                prix_negociable: formData.get('prix_negociable') === 'on',
+                permis_conduire: formData.get('permis_conduire') || '',
+                type_service: formData.get('type_service') || '',
+                transmission: formData.get('transmission') || '',
+                modele_vehicule: formData.get('modele_vehicule') || '',
+                type: page.dataset.providerType,
+            };
+            if (photoData) profile.photo_profil_data = photoData;
             const response = await fetch('/prestataires/api', {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    nom: formData.get('nom'),
-                    post_nom: formData.get('post_nom') || '',
-                    prenom: formData.get('prenom') || '',
-                    telephone: phoneNormalized.value,
-                    indicatif_telephone: phoneCallingCode.value,
-                    region_telephone: phoneRegion.value,
-                    description: formData.get('description') || '',
-                    pays: formData.get('pays') || '',
-                    ville: formData.get('ville') || '',
-                    commune: formData.get('commune') || '',
-                    annees_experience: formData.get('annees_experience') || '',
-                    competences: formData.get('competences') || '',
-                    tarif_mensuel: formData.get('tarif_mensuel') || '',
-                    prix_negociable: formData.get('prix_negociable') === 'on',
-                    permis_conduire: formData.get('permis_conduire') || '',
-                    type_service: formData.get('type_service') || '',
-                    transmission: formData.get('transmission') || '',
-                    modele_vehicule: formData.get('modele_vehicule') || '',
-                    type: page.dataset.providerType,
-                }),
+                body: JSON.stringify(profile),
             });
             const payload = await readPayload(response);
             if ([401, 403].includes(response.status)) {
@@ -194,6 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
             status.className = 'provider-form-message is-success';
             status.textContent = payload.message || 'Prestataire ajouté avec succès.';
             form.reset();
+            photoEditor.reset();
             refreshPhoneFields();
         } catch (error) {
             status.className = 'provider-form-message is-error';

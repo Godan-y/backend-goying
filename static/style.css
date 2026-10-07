@@ -8305,6 +8305,83 @@ input[type="checkbox"] {
 .provider-form-field select:focus { border-color: #d5a415; outline: 0; box-shadow: 0 0 0 3px rgba(245, 207, 78, .2); }
 .provider-form-field input[aria-invalid="true"] { border-color: #d92d20; }
 .provider-form-field small { color: var(--provider-form-muted); font-size: 9px; }
+.provider-profile-photo-editor {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.provider-profile-photo-preview {
+    position: relative;
+    display: grid;
+    width: 88px;
+    height: 88px;
+    flex: 0 0 88px;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid #e4e7ec;
+    border-radius: 50%;
+    color: #667085;
+    background: #f2f4f7;
+    font-size: 34px;
+}
+.provider-profile-photo-preview img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+}
+.provider-profile-photo-preview img[hidden],
+.provider-profile-photo-preview [hidden] { display: none; }
+.provider-profile-photo-controls {
+    display: grid;
+    min-width: min(100%, 240px);
+    flex: 1 1 240px;
+    gap: 7px;
+}
+.provider-profile-photo-controls > label { color: #344054; font-size: 11px; font-weight: 800; }
+.provider-profile-photo-controls > input[type="file"] {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    color: #344054;
+    background: #fff;
+    font: inherit;
+    font-size: 12px;
+}
+.provider-profile-photo-controls > input[type="file"]::file-selector-button {
+    min-height: 28px;
+    margin-right: 9px;
+    padding: 4px 9px;
+    border: 0;
+    border-radius: 6px;
+    color: #344054;
+    background: #f2f4f7;
+    font: inherit;
+    cursor: pointer;
+}
+.provider-profile-photo-controls > button {
+    justify-self: start;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    color: #344054;
+    background: #fff;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.provider-profile-photo-controls > small { color: var(--provider-form-muted); font-size: 10px; line-height: 1.5; }
+.provider-photo-error { min-height: 0; margin: 0; color: #b42318; font-size: 11px; }
+.provider-photo-error:empty { display: none; }
 .provider-form .required-label { color: #b42318; }
 .provider-form-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 .provider-phone-input { display: grid; grid-template-columns: minmax(150px, .55fr) minmax(0, 1fr); gap: 8px; }

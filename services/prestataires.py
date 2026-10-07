@@ -1,14 +1,47 @@
+import base64
+import binascii
+import logging
+import os
+import re
+import uuid
 from datetime import datetime, timezone
 
+import boto3
 from fastapi import APIRouter, Depends, HTTPException
 import phonenumbers
 from phonenumbers import NumberParseException, PhoneNumberFormat
 from pydantic import BaseModel
+from botocore.exceptions import BotoCoreError, ClientError
 
 from dependencies import require_role
 from firebase import db
 
 router = APIRouter(prefix="/prestataires", tags=["prestataires"])
+logger = logging.getLogger(__name__)
+
+BUCKET_NAME = os.environ.get("AWS_BUCKET_NAME", "gm-biblio-storage")
+REGION = os.environ.get("AWS_REGION", "eu-west-3")
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
+    region_name=REGION,
+)
+MAX_PROFILE_PHOTO_SIZE = 10 * 1024 * 1024
+MAX_PROFILE_PHOTO_ENCODED_SIZE = 4 * ((MAX_PROFILE_PHOTO_SIZE + 2) // 3)
+PROFILE_PHOTO_DATA_URL = re.compile(
+    r"^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]*={0,2})$"
+)
+PROFILE_PHOTO_FORMATS = {
+    "image/jpeg": (".jpg", lambda content: content.startswith(b"\xff\xd8\xff")),
+    "image/png": (".png", lambda content: content.startswith(b"\x89PNG\r\n\x1a\n")),
+    "image/webp": (
+        ".webp",
+        lambda content: len(content) >= 12
+        and content.startswith(b"RIFF")
+        and content[8:12] == b"WEBP",
+    ),
+}
 
 BOOKING_STATUS_PENDING = "En attente"
 BOOKING_STATUS_CONFIRMED = "Confirmé"
@@ -40,6 +73,7 @@ class NouveauPrestataire(BaseModel):
     transmission: str = ""
     modele_vehicule: str = ""
     type: str
+    photo_profil_data: str | None = None
 
 
 class ValidationTelephonePrestataire(BaseModel):
@@ -66,6 +100,69 @@ class PrestataireModification(BaseModel):
     transmission: str = ""
     modele_vehicule: str = ""
     type: str
+    photo_profil_data: str | None = None
+
+
+def _televerser_photo_profil(data_url: str, type_prestataire: str, prestataire_id: str):
+    match = PROFILE_PHOTO_DATA_URL.fullmatch(data_url)
+    if not match:
+        raise HTTPException(
+            status_code=422,
+            detail="La photo doit être une image JPEG, PNG ou WebP valide.",
+        )
+
+    content_type, encoded_content = match.groups()
+    if len(encoded_content) > MAX_PROFILE_PHOTO_ENCODED_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="La photo dépasse la taille maximale autorisée de 10 Mo.",
+        )
+    try:
+        image_content = base64.b64decode(encoded_content, validate=True)
+    except (binascii.Error, ValueError) as error:
+        raise HTTPException(status_code=422, detail="Le fichier image est invalide.") from error
+
+    if not image_content:
+        raise HTTPException(status_code=422, detail="Le fichier image est vide.")
+    if len(image_content) > MAX_PROFILE_PHOTO_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="La photo dépasse la taille maximale autorisée de 10 Mo.",
+        )
+
+    extension, is_valid_image = PROFILE_PHOTO_FORMATS[content_type]
+    if not is_valid_image(image_content):
+        raise HTTPException(
+            status_code=422,
+            detail="Le contenu du fichier ne correspond pas à une image valide.",
+        )
+
+    storage_type = "chauffeurs" if type_prestataire == "chauffeur" else "menagers"
+    object_key = (
+        f"goying/prestataires/{storage_type}/{prestataire_id}/"
+        f"profile-{uuid.uuid4().hex}{extension}"
+    )
+    try:
+        s3_client.put_object(
+            Bucket=BUCKET_NAME,
+            Key=object_key,
+            Body=image_content,
+            ContentType=content_type,
+        )
+    except (BotoCoreError, ClientError) as error:
+        logger.exception("Échec du téléversement de la photo du prestataire %s", prestataire_id)
+        raise HTTPException(
+            status_code=502,
+            detail="Le téléversement de la photo a échoué. Réessayez.",
+        ) from error
+    return object_key, f"https://{BUCKET_NAME}.s3.{REGION}.amazonaws.com/{object_key}"
+
+
+def _supprimer_photo_stockee(object_key: str):
+    try:
+        s3_client.delete_object(Bucket=BUCKET_NAME, Key=object_key)
+    except (BotoCoreError, ClientError):
+        logger.exception("Impossible de nettoyer la photo temporaire %s", object_key)
 
 
 @router.post("/api")
@@ -90,7 +187,8 @@ def ajouter_prestataire(
         raise HTTPException(status_code=400, detail="Le numéro de permis de conduire est obligatoire")
 
     reference = db.collection("providers").document()
-    reference.set({
+    photo_key = None
+    profile = {
         "name": f"{prenom} {nom}".strip() if prenom else nom,
         "nom": nom,
         "postNom": prestataire.post_nom.strip(),
@@ -127,7 +225,22 @@ def ajouter_prestataire(
         "managementMode": "admin",
         "createdBy": _gestionnaire["nom"],
         "createdAt": datetime.now(timezone.utc),
-    })
+    }
+    if prestataire.photo_profil_data:
+        photo_key, photo_url = _televerser_photo_profil(
+            prestataire.photo_profil_data, type_prestataire, reference.id
+        )
+        profile["photo_profil"] = photo_url
+    try:
+        reference.set(profile)
+    except Exception as error:
+        if photo_key:
+            _supprimer_photo_stockee(photo_key)
+        logger.exception("Échec de l'enregistrement du prestataire %s", reference.id)
+        raise HTTPException(
+            status_code=500,
+            detail="Impossible d'enregistrer le prestataire.",
+        ) from error
 
     return {"message": "Prestataire ajouté", "prestataire_id": reference.id}
 
@@ -473,13 +586,14 @@ def modifier_prestataire(
         raise HTTPException(status_code=400, detail="Le numéro de permis de conduire est obligatoire")
 
     reference = db.collection("providers").document(prestataire_id)
-    if not reference.get().exists:
+    existing_snapshot = reference.get()
+    if not existing_snapshot.exists:
         raise HTTPException(status_code=404, detail="Prestataire introuvable")
 
     competences = prestataire.competences.strip()
     tarif_mensuel = prestataire.tarif_mensuel.strip()
     description = prestataire.description.strip()
-    reference.update({
+    updates = {
         "name": f"{prenom} {nom}".strip() if prenom else nom,
         "nom": nom,
         "postNom": prestataire.post_nom.strip(),
@@ -513,7 +627,23 @@ def modifier_prestataire(
         "modeleVehicule": prestataire.modele_vehicule.strip(),
         "updatedAt": datetime.now(timezone.utc),
         "updatedBy": gestionnaire["nom"],
-    })
+    }
+    photo_key = None
+    if prestataire.photo_profil_data:
+        photo_key, photo_url = _televerser_photo_profil(
+            prestataire.photo_profil_data, type_prestataire, prestataire_id
+        )
+        updates["photo_profil"] = photo_url
+    try:
+        reference.update(updates)
+    except Exception as error:
+        if photo_key:
+            _supprimer_photo_stockee(photo_key)
+        logger.exception("Échec de la mise à jour du prestataire %s", prestataire_id)
+        raise HTTPException(
+            status_code=500,
+            detail="Impossible de modifier le prestataire.",
+        ) from error
     return {"message": "Prestataire modifié", "prestataire_id": prestataire_id}
 
 

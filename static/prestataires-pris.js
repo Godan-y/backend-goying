@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderProvider(provider) {
         const name = clean(provider.name || provider.nom || provider.nom_complet) || 'Prestataire sans nom';
-        const photo = clean(provider.avatarUrl || provider.photo_url || provider.photo);
+        const photo = clean(provider.photo_profil || provider.avatarUrl || provider.photo_url || provider.photo);
         const type = displayType(providerType(provider)) || 'Type non renseigné';
         const phone = clean(provider.phone || provider.telephone);
         const email = clean(provider.email);
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const provider = providers.find((item) => String(item.id) === id);
         if (!provider) return;
         const name = clean(provider.name || provider.nom || provider.nom_complet) || 'Prestataire sans nom';
-        const photo = clean(provider.avatarUrl || provider.photo_url || provider.photo);
+        const photo = clean(provider.photo_profil || provider.avatarUrl || provider.photo_url || provider.photo);
         const values = [
             ['Type', displayType(providerType(provider))],
             ['Statut', 'Indisponible'],

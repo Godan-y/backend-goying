@@ -222,7 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isRefusedPage) return renderRefusedProvider(provider);
 
         const name = provider.nom || provider.nom_complet || provider.name || 'Prestataire sans nom';
-        const photo = provider.photo || provider.photo_url || provider.avatarUrl || '';
+        const photo = provider.photo_profil || provider.photo || provider.photo_url || provider.avatarUrl || '';
+        const initial = clean(name).charAt(0).toLocaleUpperCase('fr') || 'P';
         const statusLabel = {
             en_attente: 'En attente',
             approuve: 'Disponible',
@@ -252,7 +253,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>`;
 
         return `<article class="provider-card">
-            ${photo ? `<img src="${escapeHtml(photo)}" alt="Photo de ${escapeHtml(name)}" loading="lazy">` : '<div class="provider-avatar">P</div>'}
+            ${photo
+                ? `<img src="${escapeHtml(photo)}" alt="Photo de ${escapeHtml(name)}" loading="lazy"><div class="provider-avatar" hidden>${escapeHtml(initial)}</div>`
+                : `<div class="provider-avatar" aria-label="Avatar de ${escapeHtml(name)}">${escapeHtml(initial)}</div>`}
             <div class="provider-content">
                 <div class="house-heading">
                     <div><p class="eyebrow">${escapeHtml(provider.categorie || provider.specialite || provider.specialty || 'Prestataire')}</p><h2>${escapeHtml(name)}</h2></div>
@@ -268,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderPendingProvider(provider) {
         const name = clean(provider.nom || provider.nom_complet || provider.name) || 'Prestataire sans nom';
-        const photo = clean(provider.photo_url || provider.avatarUrl || provider.photo);
+        const photo = clean(provider.photo_profil || provider.photo_url || provider.avatarUrl || provider.photo);
         const specialty = clean(provider.categorie || provider.specialite || provider.specialty) || 'Type non renseigné';
         const email = clean(provider.email);
         const phone = clean(provider.telephone || provider.phone);
@@ -309,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderRefusedProvider(provider) {
         const name = clean(provider.nom || provider.nom_complet || provider.name) || 'Prestataire sans nom';
-        const photo = clean(provider.photo_url || provider.avatarUrl || provider.photo);
+        const photo = clean(provider.photo_profil || provider.photo_url || provider.avatarUrl || provider.photo);
         const specialty = clean(provider.categorie || provider.specialite || provider.specialty) || 'Type non renseigné';
         const email = clean(provider.email);
         const phone = clean(provider.telephone || provider.phone);
@@ -346,6 +349,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function attachImageFallbacks() {
+        document.querySelectorAll('.provider-card img').forEach((image) => {
+            if (image.dataset.fallbackBound) return;
+            image.dataset.fallbackBound = 'true';
+            image.addEventListener('error', () => {
+                image.hidden = true;
+                const fallback = image.nextElementSibling;
+                if (fallback) fallback.hidden = false;
+            }, { once: true });
+        });
         document.querySelectorAll('.provider-pending-avatar img, .provider-refused-avatar img').forEach((image) => {
             if (image.dataset.fallbackBound) return;
             image.dataset.fallbackBound = 'true';
@@ -381,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const provider = loadedProviders.find((item) => item.id === providerId);
         if (!provider) return;
         const name = clean(provider.nom || provider.nom_complet || provider.name) || 'Prestataire sans nom';
-        const photo = clean(provider.photo_url || provider.avatarUrl || provider.photo);
+        const photo = clean(provider.photo_profil || provider.photo_url || provider.avatarUrl || provider.photo);
         const specialty = clean(provider.categorie || provider.specialite || provider.specialty);
         const statusLabel = isRefusedPage ? 'Demande rejetée' : 'En attente';
         const values = [
