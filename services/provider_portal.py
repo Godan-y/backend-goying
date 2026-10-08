@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from firebase_admin import firestore
 from pydantic import BaseModel, ConfigDict, Field
 
-from dependencies import get_current_firebase_user
+from dependencies import get_current_firebase_user, require_user_profile
 from firebase import db
 
 
@@ -72,7 +72,10 @@ def _verified_provider_or_error(firebase_user: dict):
 
 
 @router.get("/api/provider-missions")
-def list_provider_missions(firebase_user: dict = Depends(get_current_firebase_user)):
+def list_provider_missions(
+    firebase_user: dict = Depends(get_current_firebase_user),
+    _user_profile: dict = Depends(require_user_profile),
+):
     provider = _verified_provider_or_error(firebase_user)
     try:
         missions = []
@@ -95,6 +98,7 @@ def list_provider_missions(firebase_user: dict = Depends(get_current_firebase_us
 def request_provider_completion(
     booking_id: str,
     firebase_user: dict = Depends(get_current_firebase_user),
+    _user_profile: dict = Depends(require_user_profile),
 ):
     if not booking_id or len(booking_id) > 128:
         raise HTTPException(status_code=400, detail="Mission invalide")
@@ -134,6 +138,7 @@ def request_provider_completion(
 def update_provider_availability(
     update: ProviderAvailabilityUpdate,
     firebase_user: dict = Depends(get_current_firebase_user),
+    _user_profile: dict = Depends(require_user_profile),
 ):
     if update.provider_availability not in {"disponible", "indisponible"}:
         raise HTTPException(status_code=400, detail="Disponibilité invalide")

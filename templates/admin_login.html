@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Connexion administration globale</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell admin-login-shell">
+    <header class="house-dashboard-header">
+        <a class="house-dashboard-brand" href="/" aria-label="GOYING, accueil">
+            <span class="house-dashboard-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>ADMINISTRATION GLOBALE</small></span>
+        </a>
+        <nav class="house-dashboard-nav" aria-label="Navigation administration">
+            <a href="/">Accueil</a>
+        </nav>
+    </header>
+
+    <section class="admin-login-card" aria-labelledby="admin-login-title">
+        <p class="house-dashboard-kicker">ACCÈS SÉCURISÉ · FIREBASE</p>
+        <h1 id="admin-login-title">Connexion administrateur</h1>
+        <p class="admin-login-intro">Connectez-vous avec votre compte Firebase autorisé à administrer les profils Goying.</p>
+        {% if not firebase_configured %}
+        <div class="admin-users-alert is-error" role="alert">
+            La configuration Firebase Web est incomplète. Contactez l'administrateur technique.
+        </div>
+        {% endif %}
+        <form id="admin-login-form" class="admin-login-form">
+            <label for="admin-email">Adresse email</label>
+            <input id="admin-email" name="email" type="email" autocomplete="username" required maxlength="320">
+
+            <label for="admin-password">Mot de passe</label>
+            <input id="admin-password" name="password" type="password" autocomplete="current-password" required>
+
+            <p class="admin-users-alert" id="admin-login-message" role="status" aria-live="polite" hidden></p>
+            <button class="house-dashboard-primary" type="submit" {% if not firebase_configured %}disabled{% endif %}>
+                Se connecter
+            </button>
+        </form>
+        <p class="admin-login-security">L'accès est vérifié côté serveur. Les rôles métiers seuls ne donnent aucun privilège d'administration.</p>
+    </section>
+</main>
+<script id="firebase-web-config" type="application/json">{{ firebase_web_config | tojson }}</script>
+{% if firebase_configured %}
+<script type="module" src="/static/admin-login.js"></script>
+{% endif %}
+</body>
+</html>

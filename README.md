@@ -16,6 +16,23 @@ Configure aussi une clé secrète JWT avant de lancer le serveur :
 $env:JWT_SECRET_KEY="une-cle-longue-et-secrete"
 ```
 
+Pour la connexion Firebase de l'interface d'administration globale, configure
+les paramètres de l'application Web Firebase (la clé API Web n'est pas une clé
+de service) :
+
+```powershell
+$env:FIREBASE_WEB_API_KEY="..."
+$env:FIREBASE_WEB_AUTH_DOMAIN="votre-projet.firebaseapp.com"
+$env:FIREBASE_WEB_PROJECT_ID="votre-projet"
+$env:FIREBASE_WEB_APP_ID="..."
+```
+
+Active le fournisseur Email/Mot de passe dans Firebase Authentication. L'accès
+à `/admin/users` exige une session Firebase vérifiée et un profil Firestore
+actif avec `isAdmin: true`; le JWT des gestionnaires ne donne pas cet accès.
+La page utilise une session serveur HttpOnly de huit heures et les endpoints
+d'administration conservent leur contrôle Firebase côté API.
+
 ## Lancement
 
 ```bash
@@ -101,6 +118,71 @@ Collection `prestataires` :
   "date_creation": "..."
 }
 ```
+
+### Profils des comptes Firebase
+
+Les utilisateurs déjà authentifiés par Firebase peuvent être associés à un profil
+Firestore `users/{uid}`. La dépendance backend `require_user_profile` crée ce
+profil lors de sa première utilisation si nécessaire, à partir de l'UID du token
+Firebase vérifié. Le rôle initial est `null` : aucun privilège n'est accordé
+automatiquement.
+
+Le profil contient `uid`, `email`, `displayName`, `photoURL`, `role`, `statut`,
+`actif`, `bloque`, `createdAt` et `updatedAt`; `telephone` est ajouté seulement
+s'il est fourni lors d'une mise à jour autorisée. `lastLoginAt` n'est pas écrit
+par les requêtes API. Aucun mot de passe n'est enregistré. Firebase
+Authentication reste la source canonique de l'identité et de l'email; les claims
+d'email et de nom sont seulement copiés à la création du profil et ne sont pas
+resynchronisés à chaque requête.
+
+Les profils bloqués ou désactivés sont refusés par `require_user_profile`, qui
+est appliqué aux routes Firebase du portail prestataire et à la création d'avis.
+`update_current_user_profile` n'autorise que les champs `displayName`,
+`telephone` et `photoURL`; les rôles et statuts administratifs sont exclus.
+La connexion JWT bcrypt des gestionnaires dans `gestionnaires` reste inchangée.
+
+### Administration globale des profils Firebase
+
+Les routes `/api/admin/users` sont réservées à un profil Firebase actif portant
+`isAdmin: true`. Les rôles métier (`maisons`, `prestataires`, `voitures`) ne
+donnent jamais cette permission. Le client ne peut pas modifier `isAdmin` via
+la mise à jour de son propre profil.
+
+Pour le premier administrateur, exécuter une seule fois depuis un environnement
+opérateur disposant des identifiants Firebase Admin :
+
+```powershell
+py -m scripts.bootstrap_admin <UID_FIREBASE> --confirm I_CONFIRM_FIRST_ADMIN
+```
+
+La commande valide que le compte Firebase existe et est actif, refuse le
+bootstrap si un administrateur ou le verrou de bootstrap existe déjà, puis
+crée/actualise le profil, le compteur transactionnel et l'entrée
+`adminActions`. Elle ne peut pas être appelée par une route HTTP. La collection
+`systemConfig` contient le document `userAdministration` avec le nombre
+d'administrateurs globaux actifs; ne pas modifier ce compteur manuellement.
+
+Routes disponibles :
+
+- `GET /api/admin/users` : liste paginée (1–100 éléments) avec `cursor`, filtres
+  `role`, `statut`, `actif`, `bloque` et `isAdmin`; la réponse contient
+  `users`, `nextCursor` et `hasMore`.
+- Recherche exacte sans scan : `?search=<UID>&searchBy=uid` (défaut) ou
+  `?search=<email>&searchBy=email`.
+- `GET /api/admin/users/{uid}` : détail du profil et état du compte Firebase.
+- `PATCH /api/admin/users/{uid}` : uniquement `displayName`, `telephone`,
+  `role` (rôle métier non administrateur, ou `null`) et `isAdmin` (booléen).
+- `POST /api/admin/users/{uid}/block|unblock|activate|deactivate` : contrôle
+  des champs `bloque`, `actif` et `statut`.
+
+Les modifications administratives et leurs entrées `adminActions` sont
+écrites dans la même transaction Firestore. Le compteur empêche la désactivation
+du dernier administrateur actif. Un blocage/désactivation empêche l'accès aux
+routes qui passent par `require_user_profile`; cette phase ne désactive pas
+Firebase Authentication et ne révoque pas les refresh tokens. La suppression
+de comptes, la révocation effective des sessions et les éventuelles références
+historiques ne sont pas incluses dans cette API. Les filtres combinés peuvent
+nécessiter la création d'index Firestore proposés par Firebase.
 
 ## Routes principales
 

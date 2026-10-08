@@ -14,6 +14,8 @@ from services.prestataires import router as prestataires_router
 from services.provider_portal import router as provider_portal_router
 from services.maisons import router as maisons_router
 from services.reviews import router as reviews_router
+from services.admin_users import router as admin_users_router
+from services.admin_ui import router as admin_ui_router
 from services.voitures import router as voitures_router
 app = FastAPI(title="Plateforme de services")
 app.add_middleware(
@@ -28,6 +30,8 @@ app.add_middleware(
 )
 app.include_router(reviews_router)
 app.include_router(provider_portal_router)
+app.include_router(admin_users_router)
+app.include_router(admin_ui_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 

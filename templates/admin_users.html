@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Gestion des utilisateurs</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell admin-users-shell" data-admin-users>
+    <header class="house-dashboard-header">
+        <a class="house-dashboard-brand" href="/" aria-label="GOYING, console">
+            <span class="house-dashboard-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>ADMINISTRATION GLOBALE</small></span>
+        </a>
+        <nav class="house-dashboard-nav" aria-label="Navigation administration globale">
+            <a href="/" class="admin-users-home">Accueil</a>
+            <a href="/admin/users" class="house-dashboard-active" aria-current="page">👥 Utilisateurs</a>
+            <button type="button" data-admin-logout>Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="house-dashboard-hero admin-users-hero">
+        <div>
+            <p class="house-dashboard-kicker">ESPACE SÉCURISÉ · ADMINISTRATION GLOBALE</p>
+            <h1>Gestion des utilisateurs</h1>
+            <p>Consultez les profils Firebase et gérez leur accès à Goying.</p>
+        </div>
+    </section>
+
+    <p class="admin-users-alert" id="admin-users-message" role="status" aria-live="polite" hidden></p>
+
+    <section class="admin-users-panel" aria-label="Recherche et filtres utilisateurs">
+        <form id="admin-users-filters" class="admin-users-filters">
+            <label class="admin-users-search">
+                <span>Recherche exacte</span>
+                <span class="admin-users-search-controls">
+                    <input id="admin-search" type="search" maxlength="320" placeholder="UID ou email">
+                    <select id="admin-search-by" aria-label="Champ de recherche">
+                        <option value="uid">UID</option>
+                        <option value="email">Email</option>
+                    </select>
+                </span>
+            </label>
+            <label>
+                <span>Rôle métier</span>
+                <input id="admin-role-filter" type="text" maxlength="50" placeholder="Tous les rôles">
+            </label>
+            <label>
+                <span>Statut</span>
+                <select id="admin-status-filter">
+                    <option value="">Tous les statuts</option>
+                    <option value="actif">Actif</option>
+                    <option value="inactif">Inactif</option>
+                    <option value="bloque">Bloqué</option>
+                </select>
+            </label>
+            <button class="admin-users-filter-button" type="submit">Rechercher</button>
+            <button class="admin-users-reset-button" type="button" id="admin-reset-filters">Réinitialiser</button>
+        </form>
+    </section>
+
+    <section class="admin-users-panel admin-users-list-panel" aria-labelledby="admin-users-list-title">
+        <div class="admin-users-list-heading">
+            <div>
+                <p class="house-dashboard-kicker">COMPTES FIREBASE</p>
+                <h2 id="admin-users-list-title">Utilisateurs</h2>
+            </div>
+            <button class="admin-users-reset-button" id="admin-refresh" type="button">Actualiser</button>
+        </div>
+        <p class="admin-users-loading" id="admin-users-loading" role="status" hidden>Chargement des utilisateurs…</p>
+        <p class="admin-users-empty" id="admin-users-empty" hidden>Aucun utilisateur trouvé avec ces critères.</p>
+        <div class="admin-users-table-wrap" id="admin-users-table-wrap" hidden>
+            <table class="admin-users-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Utilisateur</th>
+                        <th scope="col">Rôle</th>
+                        <th scope="col">Statut</th>
+                        <th scope="col">Administration</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-users-rows"></tbody>
+            </table>
+        </div>
+        <div class="admin-users-pagination">
+            <span id="admin-page-status" aria-live="polite"></span>
+            <button class="admin-users-reset-button" id="admin-next-page" type="button" hidden>Page suivante</button>
+        </div>
+    </section>
+</main>
+
+<dialog class="admin-user-dialog" id="admin-user-dialog" aria-labelledby="admin-user-dialog-title">
+    <form id="admin-user-form" class="admin-user-form">
+        <header>
+            <div>
+                <p class="house-dashboard-kicker">PROFIL UTILISATEUR</p>
+                <h2 id="admin-user-dialog-title">Détails utilisateur</h2>
+            </div>
+            <button class="admin-dialog-close" type="button" data-close-dialog aria-label="Fermer">×</button>
+        </header>
+        <div class="admin-user-identity" id="admin-user-identity"></div>
+        <label>
+            Nom affiché
+            <input name="displayName" maxlength="200">
+        </label>
+        <label>
+            Téléphone
+            <input name="telephone" maxlength="40">
+        </label>
+        <label>
+            Rôle métier (laisser vide pour aucun)
+            <input name="role" maxlength="50">
+        </label>
+        <label class="admin-user-admin-toggle">
+            <input name="isAdmin" type="checkbox">
+            <span>Administrateur global (isAdmin)</span>
+        </label>
+        <p class="admin-user-auth-state" id="admin-user-auth-state"></p>
+        <div class="admin-user-dialog-actions">
+            <button class="admin-users-reset-button" type="button" data-close-dialog>Fermer</button>
+            <button class="admin-users-filter-button" type="submit">Enregistrer les modifications</button>
+        </div>
+    </form>
+</dialog>
+
+<script id="firebase-web-config" type="application/json">{{ firebase_web_config | tojson }}</script>
+<script type="module" src="/static/admin-users.js"></script>
+</body>
+</html>

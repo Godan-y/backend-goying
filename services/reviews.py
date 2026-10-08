@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from firebase_admin import firestore
 from pydantic import BaseModel, ConfigDict, Field
 
-from dependencies import get_current_firebase_user
+from dependencies import get_current_firebase_user, require_user_profile
 from firebase import db
 
 
@@ -40,6 +40,7 @@ def _is_completed(booking: dict) -> bool:
 def create_booking_review(
     request: BookingReviewRequest,
     firebase_user: dict = Depends(get_current_firebase_user),
+    _user_profile: dict = Depends(require_user_profile),
 ):
     transaction = db.transaction()
 
