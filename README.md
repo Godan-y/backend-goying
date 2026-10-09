@@ -141,6 +141,23 @@ est appliqué aux routes Firebase du portail prestataire et à la création d'av
 `telephone` et `photoURL`; les rôles et statuts administratifs sont exclus.
 La connexion JWT bcrypt des gestionnaires dans `gestionnaires` reste inchangée.
 
+Les anciens documents de la collection `users` dont l'ID diffère du UID
+Firebase restent lisibles par une recherche Firestore indexée sur leur champ
+`uid`. Les champs historiques `fullName` et `phone` sont exposés à l'API comme
+`displayName` et `telephone`. Une migration non destructive vers
+`users/{uid}` est disponible pour les profils identifiés sans supprimer leurs
+documents sources :
+
+```powershell
+py -m scripts.migrate_legacy_user_profiles utilisateur1@example.com utilisateur2@example.com
+```
+
+La migration vérifie la correspondance entre le compte Firebase et le champ
+`uid`, refuse d'écraser un document canonique existant, copie les champs métier
+connus, et marque le document source avec `migratedToUid`/`migratedAt`. Les
+documents sources sont conservés; les champs non autorisés ou sensibles
+empêchent la migration au lieu d'être copiés.
+
 ### Administration globale des profils Firebase
 
 Les routes `/api/admin/users` sont réservées à un profil Firebase actif portant
@@ -167,6 +184,9 @@ Routes disponibles :
 - `GET /api/admin/users` : liste paginée (1–100 éléments) avec `cursor`, filtres
   `role`, `statut`, `actif`, `bloque` et `isAdmin`; la réponse contient
   `users`, `nextCursor` et `hasMore`.
+- `GET /api/admin/users/stats` : nombre total des profils Goying, calculé par
+  agrégation Firestore sans charger les documents et sans compter les sources
+  déjà migrées.
 - Recherche exacte sans scan : `?search=<UID>&searchBy=uid` (défaut) ou
   `?search=<email>&searchBy=email`.
 - `GET /api/admin/users/{uid}` : détail du profil et état du compte Firebase.

@@ -25,7 +25,7 @@ let activeFilters = {};
 let requestInProgress = false;
 
 document.querySelector("[data-admin-logout]").addEventListener("click", logout);
-document.querySelector("#admin-refresh").addEventListener("click", () => loadUsers());
+document.querySelector("#admin-refresh").addEventListener("click", refreshData);
 document.querySelector("#admin-reset-filters").addEventListener("click", resetFilters);
 filtersForm.addEventListener("submit", applyFilters);
 nextButton.addEventListener("click", () => loadUsers(nextCursor));
@@ -42,6 +42,7 @@ onAuthStateChanged(auth, (user) => {
     firebaseUser = user;
     if (!requestInProgress) {
         loadUsers();
+        loadUserStats();
     }
 });
 
@@ -109,6 +110,26 @@ async function loadUsers(cursor = null) {
         setLoading(false);
         requestInProgress = false;
     }
+}
+
+async function loadUserStats() {
+    const totalUsers = document.querySelector("#admin-total-users");
+    totalUsers.textContent = "…";
+    try {
+        const payload = await apiRequest("/api/admin/users/stats");
+        totalUsers.textContent = new Intl.NumberFormat("fr-FR").format(payload.totalUsers);
+    } catch (error) {
+        totalUsers.textContent = "—";
+        showMessage(error.message, true);
+        if (/administrateur|session/i.test(error.message)) {
+            window.setTimeout(() => window.location.replace("/admin/login"), 900);
+        }
+    }
+}
+
+function refreshData() {
+    loadUsers();
+    loadUserStats();
 }
 
 function setLoading(isLoading) {
@@ -244,6 +265,7 @@ async function saveProfile(event) {
         dialog.close();
         showMessage("Profil utilisateur mis à jour.");
         await loadUsers();
+        await loadUserStats();
         if (isRemovingOwnAdmin) {
             await logout();
         }
@@ -273,6 +295,7 @@ async function changeStatus(profile, action) {
             deactivate: "Utilisateur désactivé.",
         }[action]);
         await loadUsers();
+        await loadUserStats();
     } catch (error) {
         showMessage(error.message, true);
     }

@@ -4,12 +4,13 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from firebase_admin import auth as firebase_auth
 from firebase_admin import firestore
+from google.cloud.firestore_v1 import FieldFilter
 from google.cloud.firestore_v1.field_path import FieldPath
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from dependencies import require_admin
 from firebase import db
-from services.users import get_user_profile
+from services.users import get_user_profile, get_user_profile_reference, normalize_user_profile
 
 router = APIRouter(prefix="/api/admin/users", tags=["admin-users"])
 logger = logging.getLogger(__name__)
@@ -87,6 +88,7 @@ def _is_active_admin(profile: dict[str, Any]) -> bool:
 
 
 def _profile_view(profile: dict[str, Any]) -> dict[str, Any]:
+    profile = normalize_user_profile(profile)
     return {field: profile[field] for field in ADMIN_PROFILE_FIELDS if field in profile}
 
 
@@ -137,8 +139,8 @@ def _auth_user_view(uid: str, profile: dict[str, Any]) -> dict[str, Any]:
     result = _profile_view(profile)
     result.update({
         "email": auth_user.email,
-        "displayName": auth_user.display_name,
-        "photoURL": auth_user.photo_url,
+        "displayName": auth_user.display_name or profile.get("displayName"),
+        "photoURL": auth_user.photo_url or profile.get("photoURL"),
         "firebaseAuthExists": True,
         "firebaseDisabled": auth_user.disabled,
     })
@@ -213,7 +215,9 @@ def list_admin_users(
             ("isAdmin", is_admin),
         ):
             if value is not None:
-                query = query.where(field, "==", value)
+                query = query.where(
+                    filter=FieldFilter(field_path=field, op_string="==", value=value)
+                )
 
         query = query.order_by(FieldPath.document_id()).limit(limit + 1)
         if cursor:
@@ -233,10 +237,21 @@ def list_admin_users(
         profiles = []
         for document in page_documents:
             profile = document.to_dict() or {}
-            if profile.get("uid") != document.id:
-                logger.error("Profil utilisateur ignoré : UID et ID de document différents")
+            uid = profile.get("uid")
+            if profile.get("migratedToUid") == uid:
                 continue
-            profiles.append(profile)
+            if not isinstance(uid, str) or not uid.strip():
+                logger.error("Profil utilisateur ignoré : UID Firebase manquant")
+                continue
+            normalized = normalize_user_profile(profile)
+            existing_index = next(
+                (index for index, current in enumerate(profiles) if current["uid"] == uid),
+                None,
+            )
+            if existing_index is None:
+                profiles.append(normalized)
+            elif document.id == uid:
+                profiles[existing_index] = normalized
 
         auth_records = firebase_auth.get_users([
             firebase_auth.UidIdentifier(profile["uid"])
@@ -252,8 +267,14 @@ def list_admin_users(
             result = _profile_view(profile)
             result.update({
                 "email": auth_user.email if auth_user else None,
-                "displayName": auth_user.display_name if auth_user else profile.get("displayName"),
-                "photoURL": auth_user.photo_url if auth_user else profile.get("photoURL"),
+                "displayName": (
+                    auth_user.display_name if auth_user and auth_user.display_name
+                    else profile.get("displayName")
+                ),
+                "photoURL": (
+                    auth_user.photo_url if auth_user and auth_user.photo_url
+                    else profile.get("photoURL")
+                ),
                 "firebaseAuthExists": auth_user is not None,
                 "firebaseDisabled": auth_user.disabled if auth_user else None,
             })
@@ -390,7 +411,9 @@ def update_admin_user(
     action: str,
 ) -> dict[str, Any]:
     admin_ref = db.collection("users").document(admin_uid)
-    user_ref = db.collection("users").document(target_uid)
+    user_ref = get_user_profile_reference(target_uid)
+    if user_ref is None:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
     state_ref = db.collection(USER_ADMIN_STATE_COLLECTION).document(ADMIN_STATE_DOCUMENT)
     action_ref = db.collection(ADMIN_ACTIONS_COLLECTION).document()
 
@@ -414,6 +437,35 @@ def update_admin_user(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="La modification est temporairement indisponible",
+        ) from exc
+
+
+def count_admin_users() -> dict[str, int]:
+    users = db.collection("users")
+    try:
+        total_results = users.count().get()
+        migrated_results = users.where(
+            filter=FieldFilter(
+                field_path="migratedToUid",
+                op_string="!=",
+                value="",
+            )
+        ).count().get()
+        total_documents = total_results[0][0].value
+        migrated_sources = migrated_results[0][0].value
+        if (
+            isinstance(total_documents, bool)
+            or not isinstance(total_documents, int)
+            or isinstance(migrated_sources, bool)
+            or not isinstance(migrated_sources, int)
+        ):
+            raise RuntimeError("Firestore returned an invalid user count aggregation")
+        return {"totalUsers": max(0, total_documents - migrated_sources)}
+    except Exception as exc:
+        logger.exception("Impossible de compter les profils utilisateurs")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Le nombre d'utilisateurs est temporairement indisponible",
         ) from exc
 
 
@@ -450,6 +502,11 @@ def get_admin_users(
         blocked=blocked,
         is_admin=is_admin,
     )
+
+
+@router.get("/stats", dependencies=[Depends(require_admin)])
+def get_admin_user_stats():
+    return count_admin_users()
 
 
 @router.get("/{uid}", dependencies=[Depends(require_admin)])

@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import HTTPException, status
 from firebase_admin import firestore
 from google.api_core.exceptions import AlreadyExists
+from google.cloud.firestore_v1 import FieldFilter
 
 from firebase import db
 
@@ -26,6 +27,47 @@ class InvalidUserProfileUpdate(ValueError):
     """Raised when an update includes fields not editable by the user."""
 
 
+def normalize_user_profile(profile: dict[str, Any]) -> dict[str, Any]:
+    """Expose the current profile field names for older Firestore user documents."""
+    normalized = dict(profile)
+    if "displayName" not in normalized and isinstance(normalized.get("fullName"), str):
+        normalized["displayName"] = normalized["fullName"]
+    if "telephone" not in normalized and isinstance(normalized.get("phone"), str):
+        normalized["telephone"] = normalized["phone"]
+    normalized.setdefault("statut", "actif")
+    normalized.setdefault("actif", True)
+    normalized.setdefault("bloque", False)
+    return normalized
+
+
+def get_user_profile_reference(uid: str):
+    """Resolve canonical users/{uid}, or one legacy profile indexed by its uid."""
+    if not isinstance(uid, str) or not uid.strip() or len(uid) > MAX_UID_LENGTH or "/" in uid:
+        return None
+
+    users = db.collection("users")
+    canonical_ref = users.document(uid)
+    canonical_snapshot = canonical_ref.get()
+    if canonical_snapshot.exists:
+        canonical_profile = canonical_snapshot.to_dict() or {}
+        if canonical_profile.get("uid") != uid:
+            raise UserProfileIntegrityError("User profile UID does not match its document ID")
+        return canonical_ref
+
+    matches = list(
+        users.where(filter=FieldFilter(field_path="uid", op_string="==", value=uid))
+        .limit(3)
+        .stream()
+    )
+    legacy_matches = [
+        snapshot for snapshot in matches
+        if (snapshot.to_dict() or {}).get("migratedToUid") != uid
+    ]
+    if len(legacy_matches) > 1:
+        raise UserProfileIntegrityError("Multiple legacy profiles share the same Firebase UID")
+    return legacy_matches[0].reference if legacy_matches else None
+
+
 def _verified_uid(firebase_user: dict[str, Any]) -> str:
     uid = firebase_user.get("uid")
     if not isinstance(uid, str) or not uid.strip() or len(uid) > MAX_UID_LENGTH or "/" in uid:
@@ -38,18 +80,40 @@ def _verified_uid(firebase_user: dict[str, Any]) -> str:
 
 
 def get_user_profile(uid: str) -> dict[str, Any] | None:
-    """Read one profile by document ID, without scanning the users collection."""
+    """Read one canonical or legacy profile using its Firebase UID."""
     if not isinstance(uid, str) or not uid.strip() or len(uid) > MAX_UID_LENGTH or "/" in uid:
         return None
 
-    snapshot = db.collection("users").document(uid).get()
+    users = db.collection("users")
+    canonical_snapshot = users.document(uid).get()
+    if canonical_snapshot.exists:
+        profile = canonical_snapshot.to_dict() or {}
+        if profile.get("uid") != uid:
+            raise UserProfileIntegrityError("User profile UID does not match its document ID")
+        return normalize_user_profile(profile)
+
+    legacy_matches = list(
+        users.where(filter=FieldFilter(field_path="uid", op_string="==", value=uid))
+        .limit(3)
+        .stream()
+    )
+    legacy_matches = [
+        snapshot for snapshot in legacy_matches
+        if (snapshot.to_dict() or {}).get("migratedToUid") != uid
+    ]
+    if len(legacy_matches) > 1:
+        raise UserProfileIntegrityError("Multiple legacy profiles share the same Firebase UID")
+    if not legacy_matches:
+        return None
+
+    snapshot = legacy_matches[0]
     if not snapshot.exists:
         return None
 
     profile = snapshot.to_dict() or {}
     if profile.get("uid") != uid:
-        raise UserProfileIntegrityError("User profile UID does not match its document ID")
-    return profile
+        raise UserProfileIntegrityError("User profile UID does not match the requested UID")
+    return normalize_user_profile(profile)
 
 
 def _optional_claim(firebase_user: dict[str, Any], claim: str, max_length: int) -> str | None:
@@ -153,7 +217,9 @@ def update_current_user_profile(
         normalized_updates[field] = value.strip()[:field_limits[field]] if value else None
 
     get_or_create_user_profile(firebase_user)
-    reference = db.collection("users").document(uid)
+    reference = get_user_profile_reference(uid)
+    if reference is None:
+        raise UserProfileIntegrityError("User profile could not be resolved for update")
     reference.update({
         **normalized_updates,
         "updatedAt": firestore.SERVER_TIMESTAMP,

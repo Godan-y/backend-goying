@@ -33,7 +33,13 @@
             <input id="admin-email" name="email" type="email" autocomplete="username" required maxlength="320">
 
             <label for="admin-password">Mot de passe</label>
-            <input id="admin-password" name="password" type="password" autocomplete="current-password" required>
+            <div class="password-field">
+                <input id="admin-password" name="password" type="password" autocomplete="current-password" required>
+                <button id="admin-toggle-password" class="password-toggle" type="button"
+                        aria-label="Afficher le mot de passe" aria-pressed="false">
+                    <span aria-hidden="true">👁</span>
+                </button>
+            </div>
 
             <p class="admin-users-alert" id="admin-login-message" role="status" aria-live="polite" hidden></p>
             <button class="house-dashboard-primary" type="submit" {% if not firebase_configured %}disabled{% endif %}>

@@ -10,6 +10,18 @@ import { apiErrorMessage, auth, firebaseErrorMessage } from "./admin-firebase.js
 const form = document.querySelector("#admin-login-form");
 const message = document.querySelector("#admin-login-message");
 const submitButton = form.querySelector('button[type="submit"]');
+const passwordInput = form.elements.password;
+const togglePasswordButton = document.querySelector("#admin-toggle-password");
+
+togglePasswordButton.addEventListener("click", () => {
+    const passwordIsHidden = passwordInput.type === "password";
+    passwordInput.type = passwordIsHidden ? "text" : "password";
+    togglePasswordButton.setAttribute("aria-pressed", String(passwordIsHidden));
+    togglePasswordButton.setAttribute(
+        "aria-label",
+        passwordIsHidden ? "Masquer le mot de passe" : "Afficher le mot de passe",
+    );
+});
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -40,7 +52,10 @@ form.addEventListener("submit", async (event) => {
             showMessage(firebaseErrorMessage(error));
         }
     } finally {
-        form.elements.password.value = "";
+        passwordInput.value = "";
+        passwordInput.type = "password";
+        togglePasswordButton.setAttribute("aria-pressed", "false");
+        togglePasswordButton.setAttribute("aria-label", "Afficher le mot de passe");
         submitButton.disabled = false;
     }
 });

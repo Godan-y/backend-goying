@@ -215,6 +215,7 @@ class UserProfileTests(unittest.TestCase):
         updated = {**self.profile, "displayName": "Updated Name"}
         reference.get.side_effect = [
             self._snapshot(True, self.profile),
+            self._snapshot(True, self.profile),
             self._snapshot(True, updated),
         ]
 
@@ -228,6 +229,44 @@ class UserProfileTests(unittest.TestCase):
         self.assertIn("updatedAt", update)
         self.assertNotIn("role", update)
         self.assertEqual(result["displayName"], "Updated Name")
+
+    @patch("services.users.db")
+    def test_legacy_profile_is_found_by_indexed_uid_and_aliases_are_normalized(self, database):
+        users = database.collection.return_value
+        canonical_ref = users.document.return_value
+        canonical_ref.get.return_value = self._snapshot(False)
+        legacy = MagicMock(id="legacy-document-id")
+        legacy.to_dict.return_value = {
+            "uid": self.firebase_user["uid"],
+            "email": self.firebase_user["email"],
+            "fullName": "Legacy Name",
+            "phone": "+10000000000",
+            "role": "client",
+        }
+        users.where.return_value.limit.return_value.stream.return_value = [legacy]
+
+        profile = get_user_profile(self.firebase_user["uid"])
+
+        self.assertEqual(profile["uid"], self.firebase_user["uid"])
+        self.assertEqual(profile["displayName"], "Legacy Name")
+        self.assertEqual(profile["telephone"], "+10000000000")
+        self.assertEqual(profile["role"], "client")
+        self.assertEqual(profile["statut"], "actif")
+        self.assertTrue(profile["actif"])
+        users.where.assert_called_once()
+
+    @patch("services.users.db")
+    def test_multiple_legacy_profiles_for_uid_fail_closed(self, database):
+        users = database.collection.return_value
+        users.document.return_value.get.return_value = self._snapshot(False)
+        first = MagicMock(id="legacy-one")
+        first.to_dict.return_value = {"uid": self.firebase_user["uid"]}
+        second = MagicMock(id="legacy-two")
+        second.to_dict.return_value = {"uid": self.firebase_user["uid"]}
+        users.where.return_value.limit.return_value.stream.return_value = [first, second]
+
+        with self.assertRaises(UserProfileIntegrityError):
+            get_user_profile(self.firebase_user["uid"])
 
     @patch("services.users.db")
     def test_concurrent_profile_creation_uses_profile_created_by_other_request(self, database):

@@ -111,6 +111,65 @@ class AdminUserTests(unittest.TestCase):
         query.limit.assert_called_once_with(2)
         get_users.assert_called_once()
 
+    @patch("services.admin_users.db")
+    def test_user_stats_count_excludes_migrated_source_documents(self, database):
+        collection = database.collection.return_value
+        total_value = MagicMock(value=7)
+        migrated_value = MagicMock(value=3)
+        collection.count.return_value.get.return_value = [[total_value]]
+        collection.where.return_value.count.return_value.get.return_value = [[migrated_value]]
+
+        response = self.client.get("/api/admin/users/stats")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"totalUsers": 4})
+        collection.where.assert_called_once()
+
+    @patch("services.admin_users.db")
+    def test_user_stats_failure_returns_generic_service_error(self, database):
+        database.collection.return_value.count.return_value.get.side_effect = RuntimeError(
+            "backend details"
+        )
+
+        response = self.client.get("/api/admin/users/stats")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn("backend details", response.text)
+
+    @patch("services.admin_users.firebase_auth.get_users")
+    @patch("services.admin_users.db")
+    def test_list_includes_legacy_document_using_its_verified_uid_field(self, database, get_users):
+        legacy = MagicMock(id="legacy-document")
+        legacy.to_dict.return_value = {
+            "uid": "firebase-user",
+            "email": "legacy@example.test",
+            "fullName": "Legacy Person",
+            "phone": "+10000000000",
+            "role": "client",
+        }
+        query = database.collection.return_value
+        query.order_by.return_value = query
+        query.limit.return_value = query
+        query.stream.return_value = [legacy]
+        get_users.return_value.users = [
+            MagicMock(
+                uid="firebase-user",
+                email="canonical@example.test",
+                display_name=None,
+                photo_url=None,
+                disabled=False,
+            )
+        ]
+
+        response = self.client.get("/api/admin/users")
+
+        self.assertEqual(response.status_code, 200)
+        profile = response.json()["users"][0]
+        self.assertEqual(profile["uid"], "firebase-user")
+        self.assertEqual(profile["displayName"], "Legacy Person")
+        self.assertEqual(profile["telephone"], "+10000000000")
+        self.assertEqual(profile["email"], "canonical@example.test")
+
     @patch("services.admin_users.firebase_auth.get_user_by_email")
     @patch("services.admin_users.get_user_profile")
     def test_email_search_uses_exact_auth_lookup_and_uid_profile_read(
