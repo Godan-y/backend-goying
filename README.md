@@ -219,6 +219,7 @@ nécessiter la création d'index Firestore proposés par Firebase.
 - `GET /api/public/voitures/ventes` retourne uniquement les annonces de vente disponibles, sans le WhatsApp du vendeur
 - `POST /api/booking-reviews` accepte le jeton Firebase du client et enregistre un seul avis pour une réservation terminée
 - `GET /api/provider-missions`, `POST /api/provider-missions/{booking_id}/complete` et `POST /api/provider-availability` utilisent le jeton Firebase d'un prestataire approuvé
+- `POST /api/portfolio-uploads` prépare un téléversement S3 signé pour le portfolio d'un prestataire approuvé
 - `POST /login`
 - `POST /api/login`
 - `GET /dashboard/prestataires` avec un token de rôle `prestataires`
@@ -241,6 +242,14 @@ nécessiter la création d'index Firestore proposés par Firebase.
 - La suppression de réservation automobile côté gestion est exposée par :
   - `DELETE /api/voitures/reservations/{reservation_id}` (token de rôle `voitures` requis).
 - La route client est implémentée dans `booking_cancellation.py` et enregistrée dans `main.py`. Pour qu’elle soit disponible en production, pousser ces changements et redéployer le service Render. Avant ce déploiement, l’API Render ne connaîtra pas la route et la suppression ne fonctionnera pas en production.
+
+## Portfolio des prestataires
+
+`POST /api/portfolio-uploads` exige un jeton Firebase valide et un compte prestataire approuvé. Le JSON peut décrire un fichier (`fileName`, `contentType`, `fileSize`) ou une liste `files` contenant ces champs par fichier. Seuls JPEG, PNG et WebP sont acceptés; chaque fichier est limité à 5 Mo et le portfolio à six objets S3.
+
+La réponse fournit `uploadUrl` (URL PUT signée valable cinq minutes), `publicUrl`, `key`, la méthode et les en-têtes requis; pour une demande multiple, ces informations sont dans `uploads`. Le client doit téléverser les octets vers `uploadUrl` en utilisant la méthode et les en-têtes indiqués, puis enregistrer `publicUrl` dans le portfolio après réussite de la requête S3. Les objets utilisent le préfixe `goying/prestataires/{providerId}/portfolio/`.
+
+Le rôle IAM AWS utilisé par Render doit autoriser `s3:ListBucket` sur le bucket (pour vérifier la limite de six fichiers) et `s3:PutObject` sur ce préfixe. Le bucket et sa configuration CORS S3 doivent également permettre le PUT depuis l’origine de l’application.
 
 ## Générer un hash bcrypt
 
