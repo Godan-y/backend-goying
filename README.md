@@ -234,6 +234,14 @@ nécessiter la création d'index Firestore proposés par Firebase.
 - `PATCH /prestataires/{prestataire_id}/approuver` avec un token de rôle `prestataires`
 - `PATCH /prestataires/{prestataire_id}/refuser` avec un token de rôle `prestataires`
 
+## Réservations : suppression réelle côté backend
+
+- Le frontend ne doit retirer une réservation de l’interface **qu’après** une réponse backend de suppression réussie.
+- La suppression de réservation automobile côté gestion est exposée par :
+  - `DELETE /api/voitures/reservations/{reservation_id}` (token de rôle `voitures` requis).
+- Si tu utilises une route d’annulation client sécurisée (vérification de propriété de la réservation + remise de la maison disponible), elle doit être présente dans le backend **déployé** sur Render.
+- Tant que Render n’est pas redéployé avec cette route d’annulation sécurisée, la suppression réelle côté production ne peut pas fonctionner, même si l’UI masque correctement l’erreur technique.
+
 ## Générer un hash bcrypt
 
 ```powershell
