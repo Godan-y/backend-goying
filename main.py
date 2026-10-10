@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from auth import create_access_token, verify_password
+from booking_cancellation import router as booking_cancellation_router
 from firebase import db
 from services.dashboards import router as dashboards_router
 from services.prestataires import router as prestataires_router
@@ -29,6 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(reviews_router)
+app.include_router(booking_cancellation_router)
 app.include_router(provider_portal_router)
 app.include_router(admin_users_router)
 app.include_router(admin_ui_router)

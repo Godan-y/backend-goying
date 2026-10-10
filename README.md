@@ -237,10 +237,10 @@ nécessiter la création d'index Firestore proposés par Firebase.
 ## Réservations : suppression réelle côté backend
 
 - Le frontend ne doit retirer une réservation de l’interface **qu’après** une réponse backend de suppression réussie.
+- L’API client expose `DELETE /api/bookings/{booking_id}` (également `DELETE` ou `POST /api/bookings/{booking_id}/cancel`) avec un jeton Firebase. Elle vérifie l’identité du client, supprime uniquement sa réservation et remet la maison disponible si cette réservation approuvée en était bien à l’origine.
 - La suppression de réservation automobile côté gestion est exposée par :
   - `DELETE /api/voitures/reservations/{reservation_id}` (token de rôle `voitures` requis).
-- Si tu utilises une route d’annulation client sécurisée (vérification de propriété de la réservation + remise de la maison disponible), elle doit être présente dans le backend **déployé** sur Render.
-- Tant que Render n’est pas redéployé avec cette route d’annulation sécurisée, la suppression réelle côté production ne peut pas fonctionner, même si l’UI masque correctement l’erreur technique.
+- La route client est implémentée dans `booking_cancellation.py` et enregistrée dans `main.py`. Pour qu’elle soit disponible en production, pousser ces changements et redéployer le service Render. Avant ce déploiement, l’API Render ne connaîtra pas la route et la suppression ne fonctionnera pas en production.
 
 ## Générer un hash bcrypt
 
