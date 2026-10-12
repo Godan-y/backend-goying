@@ -258,3 +258,13 @@ python -c "import bcrypt; print(bcrypt.hashpw(b'Goyingmaison1', bcrypt.gensalt()
 python -c "import bcrypt; print(bcrypt.hashpw(b'Goyingprestataire2', bcrypt.gensalt()).decode())"
 python -c "import bcrypt; print(bcrypt.hashpw(b'Goyingvoiture3', bcrypt.gensalt()).decode())"
 ```
+## Candidatures prestataires (validation manuelle du paiement)
+
+L'endpoint `POST /api/professional-applications` accepte un token Firebase
+client (`Authorization: Bearer ...`) et crée une candidature prestataire
+avec statut `En attente`. Le paiement n'est pas validé automatiquement:
+`paymentStatus` est toujours initialisé à `À vérifier manuellement`.
+
+Ce flux crée aussi `professionalAccounts/{uid}` pour lier la candidature au
+compte Firebase du candidat. Une seconde candidature pour le même `uid` est
+refusée avec `409`.

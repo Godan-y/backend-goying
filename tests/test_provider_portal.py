@@ -1,8 +1,10 @@
 import unittest
 from unittest.mock import patch
 
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
 
+from dependencies import require_firebase_user
 import services.provider_portal as provider_portal
 
 
@@ -29,6 +31,169 @@ class FakeS3Client:
 
 class FakeProvider:
     id = "provider-123"
+
+
+class FakeSnapshot:
+    def __init__(self, value=None):
+        self.exists = value is not None
+        self.value = value
+
+    def to_dict(self):
+        return self.value
+
+
+class FakeDocumentReference:
+    def __init__(self, collection, document_id):
+        self.collection = collection
+        self.id = document_id
+
+    def get(self, transaction=None):
+        return FakeSnapshot(self.collection.documents.get(self.id))
+
+
+class FakeQuery:
+    def __init__(self, collection, field, value):
+        self.collection = collection
+        self.field = field
+        self.value = value
+        self.limit_value = None
+
+    def limit(self, value):
+        self.limit_value = value
+        return self
+
+    def stream(self):
+        matches = [
+            FakeSnapshot(document)
+            for document in self.collection.documents.values()
+            if document.get(self.field) == self.value
+        ]
+        return matches[:self.limit_value]
+
+
+class FakeCollection:
+    def __init__(self, name):
+        self.name = name
+        self.documents = {}
+        self.next_id = 0
+
+    def document(self, document_id=None):
+        if document_id is None:
+            self.next_id += 1
+            document_id = f"application-{self.next_id}"
+        return FakeDocumentReference(self, document_id)
+
+    def where(self, field, _operator, value):
+        return FakeQuery(self, field, value)
+
+
+class FakeTransaction:
+    def create(self, reference, value):
+        if reference.id in reference.collection.documents:
+            raise RuntimeError("Document already exists")
+        reference.collection.documents[reference.id] = value
+
+
+class FakeDatabase:
+    def __init__(self):
+        self.collections = {}
+
+    def collection(self, name):
+        if name not in self.collections:
+            self.collections[name] = FakeCollection(name)
+        return self.collections[name]
+
+    def transaction(self):
+        return FakeTransaction()
+
+
+class ProviderApplicationTests(unittest.TestCase):
+    def setUp(self):
+        self.firebase_user = {
+            "uid": "firebase-provider-123",
+            "email": "provider@example.test",
+        }
+        self.request = {
+            "fullName": "Prestataire Test",
+            "phone": "+243812345678",
+            "specialty": "chauffeur",
+            "listing": {
+                "name": "Prestataire Test",
+                "phone": "+243812345678",
+                "country": "RDC",
+                "city": "Kinshasa",
+                "commune": "Gombe",
+                "skills": ["Conduite"],
+                "experienceYears": 3,
+            },
+        }
+        self.app = FastAPI()
+        self.app.include_router(provider_portal.router)
+        self.app.dependency_overrides[require_firebase_user] = lambda: self.firebase_user
+        self.database = FakeDatabase()
+
+    def test_creates_pending_application_and_linked_account(self):
+        with (
+            patch.object(provider_portal, "db", self.database),
+            patch(
+                "services.provider_portal.firestore.transactional",
+                side_effect=lambda function: function,
+            ),
+            TestClient(self.app) as client,
+        ):
+            response = client.post("/api/professional-applications", json=self.request)
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["status"], "En attente")
+        self.assertEqual(payload["paymentStatus"], "À vérifier manuellement")
+
+        applications = self.database.collection("professionalApplications").documents
+        accounts = self.database.collection("professionalAccounts").documents
+        self.assertEqual(len(applications), 1)
+        application_id, application = next(iter(applications.items()))
+        self.assertEqual(application["uid"], self.firebase_user["uid"])
+        self.assertEqual(application["status"], "En attente")
+        self.assertEqual(application["paymentStatus"], "À vérifier manuellement")
+        self.assertEqual(application["listing"]["phone"], self.request["phone"])
+        self.assertEqual(accounts[self.firebase_user["uid"]]["applicationId"], application_id)
+        self.assertEqual(accounts[self.firebase_user["uid"]]["status"], "En attente")
+
+    def test_rejects_a_second_application_for_the_same_uid(self):
+        with (
+            patch.object(provider_portal, "db", self.database),
+            patch(
+                "services.provider_portal.firestore.transactional",
+                side_effect=lambda function: function,
+            ),
+            TestClient(self.app) as client,
+        ):
+            first_response = client.post("/api/professional-applications", json=self.request)
+            second_response = client.post("/api/professional-applications", json=self.request)
+
+        self.assertEqual(first_response.status_code, 201)
+        self.assertEqual(second_response.status_code, 409)
+        self.assertEqual(
+            len(self.database.collection("professionalApplications").documents),
+            1,
+        )
+
+    def test_requires_a_verified_firebase_user(self):
+        self.app.dependency_overrides.clear()
+        with TestClient(self.app) as client:
+            response = client.post("/api/professional-applications", json=self.request)
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_rejects_unsupported_specialty(self):
+        invalid_request = {
+            **self.request,
+            "specialty": "service",
+        }
+        with TestClient(self.app) as client:
+            response = client.post("/api/professional-applications", json=invalid_request)
+
+        self.assertEqual(response.status_code, 422)
 
 
 class ProviderPortfolioUploadTests(unittest.TestCase):

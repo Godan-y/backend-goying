@@ -3,14 +3,16 @@ import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import PurePath
+from typing import Literal
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from firebase_admin import firestore
+from google.api_core.exceptions import AlreadyExists
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from dependencies import get_current_firebase_user, require_user_profile
+from dependencies import get_current_firebase_user, require_firebase_user, require_user_profile
 from firebase import db
 
 
@@ -74,6 +76,31 @@ class PortfolioUploadRequest(BaseModel):
     )
 
 
+class ProfessionalApplicationListing(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    name: str = Field(min_length=1, max_length=200)
+    phone: str = Field(min_length=1, max_length=40)
+    country: str = Field(min_length=1, max_length=100)
+    city: str = Field(min_length=1, max_length=100)
+    commune: str = Field(default="", max_length=100)
+    skills: list[str] = Field(default_factory=list, max_length=50)
+    experienceYears: int = Field(
+        default=0,
+        ge=0,
+        le=80,
+    )
+
+
+class ProfessionalApplicationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    fullName: str = Field(min_length=1, max_length=200)
+    phone: str = Field(min_length=1, max_length=40)
+    specialty: Literal["chauffeur", "menagere"]
+    listing: ProfessionalApplicationListing
+
+
 def _portfolio_upload_files(request: PortfolioUploadRequest) -> list[PortfolioUploadFile]:
     if request.files is not None:
         if not request.files:
@@ -92,6 +119,94 @@ def _portfolio_upload_files(request: PortfolioUploadRequest) -> list[PortfolioUp
             file_size=request.file_size,
         )
     ]
+
+
+@router.post(
+    "/api/professional-applications",
+    status_code=status.HTTP_201_CREATED,
+)
+def create_professional_application(
+    request: ProfessionalApplicationRequest,
+    firebase_user: dict = Depends(require_firebase_user),
+):
+    uid = str(firebase_user["uid"]).strip()
+    full_name = request.fullName.strip()
+    phone = request.phone.strip()
+    if not full_name or not phone:
+        raise HTTPException(status_code=422, detail="Nom complet et téléphone obligatoires")
+
+    listing = request.listing.model_dump()
+    listing["phone"] = phone
+    application_collection = db.collection("professionalApplications")
+    account_reference = db.collection("professionalAccounts").document(uid)
+    application_reference = application_collection.document()
+    now = datetime.now(timezone.utc)
+    application = {
+        "uid": uid,
+        "status": "En attente",
+        "paymentStatus": "À vérifier manuellement",
+        "specialty": request.specialty,
+        "session": {
+            "uid": uid,
+            "email": str(firebase_user.get("email") or "").strip().lower(),
+            "fullName": full_name,
+            "phone": phone,
+        },
+        "listing": listing,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    account = {
+        "uid": uid,
+        "applicationId": application_reference.id,
+        "status": "En attente",
+        "paymentStatus": "À vérifier manuellement",
+        "createdAt": now,
+        "updatedAt": now,
+    }
+
+    try:
+        existing_applications = (
+            application_collection.where("uid", "==", uid).limit(1).stream()
+        )
+        if next(iter(existing_applications), None) is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Une candidature prestataire existe déjà pour ce compte.",
+            )
+
+        transaction = db.transaction()
+
+        @firestore.transactional
+        def save_application(transaction):
+            if account_reference.get(transaction=transaction).exists:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Une candidature prestataire existe déjà pour ce compte.",
+                )
+            transaction.create(application_reference, application)
+            transaction.create(account_reference, account)
+
+        save_application(transaction)
+    except HTTPException:
+        raise
+    except AlreadyExists as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Une candidature prestataire existe déjà pour ce compte.",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Impossible d'enregistrer la candidature prestataire pour %s", uid)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="L'enregistrement de votre candidature est temporairement indisponible.",
+        ) from exc
+
+    return {
+        "applicationId": application_reference.id,
+        "status": application["status"],
+        "paymentStatus": application["paymentStatus"],
+    }
 
 
 def _validate_portfolio_upload(upload: PortfolioUploadFile) -> str:
