@@ -228,6 +228,26 @@ class ProviderApplicationTests(unittest.TestCase):
         self.assertEqual(validated.phone, self.request["phone"])
         self.assertEqual(validated.listing.phone, "")
 
+    def test_rejects_a_provider_application_outside_an_open_area(self):
+        request = {
+            **self.request,
+            "listing": {
+                **self.request["listing"],
+                "country": "France",
+                "city": "Paris",
+                "commune": "",
+            },
+        }
+
+        with TestClient(self.app) as client:
+            response = client.post("/api/professional-applications", json=request)
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(
+            response.json()["detail"],
+            "Vous n'êtes pas encore éligible pour le moment dans cette zone.",
+        )
+
 
 class ProviderPortfolioUploadTests(unittest.TestCase):
     def test_single_upload_returns_signed_and_public_urls(self):

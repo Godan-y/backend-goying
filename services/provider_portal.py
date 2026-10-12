@@ -32,6 +32,21 @@ PORTFOLIO_IMAGE_TYPES = {
     ".png": "image/png",
     ".webp": "image/webp",
 }
+SUPPORTED_PROVIDER_AREAS = {
+    "RDC": {
+        "Kinshasa": frozenset((
+            "Bandalungwa", "Barumbu", "Bumbu", "Gombe", "Kalamu", "Kasa-Vubu",
+            "Kimbanseke", "Kinshasa", "Kintambo", "Kisenso", "Lemba", "Limete",
+            "Lingwala", "Makala", "Maluku", "Masina", "Matete", "Mont-Ngafula",
+            "N'Djili", "Ngaba", "Ngaliema", "Ngiri-Ngiri", "N'Sele", "Selembao",
+        )),
+        "Lubumbashi": frozenset(("Annexe", "Kamalondo", "Kampemba", "Katuba", "Kenya", "Lubumbashi", "Rwashi")),
+        "Goma": frozenset(("Goma", "Karisimbi")),
+        "Kolwezi": frozenset(("Dilala", "Manika")),
+        "Matadi": frozenset(("Matadi", "Mvuzi", "Nzanza")),
+        "Bukavu": frozenset(("Bagira", "Ibanda", "Kadutu")),
+    }
+}
 
 s3_client = boto3.client(
     "s3",
@@ -142,6 +157,18 @@ def create_professional_application(
         raise HTTPException(status_code=422, detail="Nom complet et téléphone obligatoires")
 
     listing = request.listing.model_dump()
+    supported_cities = SUPPORTED_PROVIDER_AREAS.get(request.listing.country)
+    supported_subdivisions = supported_cities.get(request.listing.city) if supported_cities else None
+    if supported_subdivisions is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Vous n'êtes pas encore éligible pour le moment dans cette zone.",
+        )
+    if request.listing.commune not in supported_subdivisions:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="La commune sélectionnée ne correspond pas à la ville choisie.",
+        )
     listing["phone"] = phone
     application_collection = db.collection("professionalApplications")
     account_reference = db.collection("professionalAccounts").document(uid)
