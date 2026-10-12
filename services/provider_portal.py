@@ -97,7 +97,13 @@ class ProfessionalApplicationRequest(BaseModel):
 
     fullName: str = Field(min_length=1, max_length=200)
     phone: str = Field(min_length=1, max_length=40)
-    specialty: Literal["chauffeur", "menagere"]
+    specialty: Literal[
+        "chauffeur",
+        "menagere",
+        "coiffeur",
+        "maquilleuse",
+        "professeur",
+    ]
     listing: ProfessionalApplicationListing
 
 

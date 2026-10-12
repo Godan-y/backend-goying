@@ -195,6 +195,24 @@ class ProviderApplicationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 422)
 
+    def test_accepts_each_specialty_offered_by_the_onboarding_form(self):
+        supported_specialties = [
+            "chauffeur",
+            "menagere",
+            "coiffeur",
+            "maquilleuse",
+            "professeur",
+        ]
+        for specialty in supported_specialties:
+            with self.subTest(specialty=specialty):
+                request = {**self.request, "specialty": specialty}
+                self.assertEqual(
+                    provider_portal.ProfessionalApplicationRequest.model_validate(
+                        request
+                    ).specialty,
+                    specialty,
+                )
+
 
 class ProviderPortfolioUploadTests(unittest.TestCase):
     def test_single_upload_returns_signed_and_public_urls(self):
