@@ -213,6 +213,21 @@ class ProviderApplicationTests(unittest.TestCase):
                     specialty,
                 )
 
+    def test_uses_the_top_level_phone_when_listing_phone_is_omitted(self):
+        request = {
+            **self.request,
+            "listing": {
+                key: value
+                for key, value in self.request["listing"].items()
+                if key != "phone"
+            },
+        }
+
+        validated = provider_portal.ProfessionalApplicationRequest.model_validate(request)
+
+        self.assertEqual(validated.phone, self.request["phone"])
+        self.assertEqual(validated.listing.phone, "")
+
 
 class ProviderPortfolioUploadTests(unittest.TestCase):
     def test_single_upload_returns_signed_and_public_urls(self):

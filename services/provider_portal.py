@@ -80,7 +80,7 @@ class ProfessionalApplicationListing(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     name: str = Field(min_length=1, max_length=200)
-    phone: str = Field(min_length=1, max_length=40)
+    phone: str = Field(default="", max_length=40)
     country: str = Field(min_length=1, max_length=100)
     city: str = Field(min_length=1, max_length=100)
     commune: str = Field(default="", max_length=100)
