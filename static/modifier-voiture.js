@@ -12,7 +12,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const response = await fetch(`/api/voitures/details/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${token}` } });
         const vehicle = await response.json();
         if (!response.ok) throw new Error(vehicle.detail || 'Voiture introuvable');
-        for (const name of ['brand', 'model', 'category', 'fuel', 'transmission', 'seats', 'currency', 'city', 'commune']) form.elements[name].value = vehicle[name] || '';
+        for (const name of ['brand', 'model', 'category', 'fuel', 'transmission', 'seats', 'currency', 'city']) form.elements[name].value = vehicle[name] || '';
+        window.KinshasaCommunes.setSavedValue(form.elements.commune, vehicle.commune);
         form.elements.price_per_day.value = vehicle.pricePerDay ?? '';
         form.elements.features.value = (vehicle.features || []).join(', ');
         form.elements.is_available.checked = vehicle.isAvailable !== false;

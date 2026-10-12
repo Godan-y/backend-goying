@@ -67,7 +67,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const value = field === 'competences' && !provider.competences && Array.isArray(provider.skills)
                     ? provider.skills.join(', ')
                     : firstValue(provider, names);
-                form.elements[field].value = value;
+                if (field === 'commune') {
+                    window.KinshasaCommunes.setSavedValue(form.elements[field], value);
+                } else {
+                    form.elements[field].value = value;
+                }
             });
             if (!form.elements.nom.value && provider.name) {
                 const nameParts = String(provider.name).trim().split(/\s+/);
@@ -76,7 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (!form.elements.pays.value && provider.location) {
                 const locationParts = String(provider.location).split(' - ').map((part) => part.trim());
-                [form.elements.commune.value, form.elements.ville.value, form.elements.pays.value] = locationParts;
+                window.KinshasaCommunes.setSavedValue(form.elements.commune, locationParts[0]);
+                form.elements.ville.value = locationParts[1] || '';
+                form.elements.pays.value = locationParts[2] || '';
             }
             const category = String(provider.categorie || provider.specialty || '').toLowerCase();
             form.elements.type.value = category.includes('chauffeur')

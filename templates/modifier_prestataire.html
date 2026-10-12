@@ -45,7 +45,9 @@
                 <label for="ville">Ville d'activité</label>
                 <input id="ville" name="ville" type="text">
                 <label for="commune">Commune</label>
-                <input id="commune" name="commune" type="text">
+                <select id="commune" name="commune" data-kinshasa-commune>
+                    <option value="">Sélectionnez votre commune</option>
+                </select>
                 <label for="annees_experience">Années d'expérience professionnelle</label>
                 <input id="annees_experience" name="annees_experience" type="number" min="0" step="1">
                 <label for="description">Présentation bio courte</label>
@@ -92,6 +94,7 @@
         </section>
     </main>
     <script src="/static/provider-photo.js"></script>
+    <script src="/static/kinshasa-communes.js"></script>
     <script src="/static/prestataire-edit.js"></script>
 </body>
 </html>

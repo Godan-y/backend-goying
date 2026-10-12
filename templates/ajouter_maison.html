@@ -49,7 +49,11 @@
                         <div><p>EMPLACEMENT DU BIEN</p><h2 id="create-location-title">Localisation</h2><small>Indiquez où se trouve la maison.</small></div>
                     </header>
                     <div class="house-create-fields">
-                        <label for="commune">Commune<input type="text" id="commune" name="commune" autocomplete="address-level2" placeholder="Ex. Ngaliema"></label>
+                        <label for="commune">Commune
+                            <select id="commune" name="commune" autocomplete="address-level2" data-kinshasa-commune>
+                                <option value="">Sélectionnez votre commune</option>
+                            </select>
+                        </label>
                         <label for="quartier">Quartier<input type="text" id="quartier" name="quartier" autocomplete="address-level3" placeholder="Nom du quartier"></label>
                         <label class="house-create-field-wide" for="avenue">Avenue et numéro<input type="text" id="avenue" name="avenue" autocomplete="street-address" placeholder="Avenue et numéro de la parcelle"></label>
                     </div>
@@ -172,6 +176,7 @@
         </div>
     </form>
 </main>
+<script src="/static/kinshasa-communes.js"></script>
 <script src="/static/ajouter-maison.js?v=20260930"></script>
 </body>
 </html>

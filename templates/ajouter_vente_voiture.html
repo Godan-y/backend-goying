@@ -164,15 +164,17 @@
                         <div>
                             <p>04 · LOCALISATION</p>
                             <h2 id="sale-location-title">Où voir le véhicule ?</h2>
-                            <small>Indiquez la ville et le quartier où le véhicule est visible.</small>
+                            <small>Indiquez la ville et la commune où le véhicule est visible.</small>
                         </div>
                     </header>
                     <div class="vehicle-create-fields">
                         <label for="sale-city">Ville où le véhicule est visible <span class="vehicle-required" aria-hidden="true">*</span>
                             <input id="sale-city" name="city" type="text" required maxlength="100" autocomplete="address-level2" placeholder="Ex. Kinshasa">
                         </label>
-                        <label for="sale-commune">Commune / Quartier <span class="vehicle-required" aria-hidden="true">*</span>
-                            <input id="sale-commune" name="commune" type="text" required maxlength="120" autocomplete="address-level3" placeholder="Ex. Gombe">
+                        <label for="sale-commune">Commune <span class="vehicle-required" aria-hidden="true">*</span>
+                            <select id="sale-commune" name="commune" required autocomplete="address-level3" data-kinshasa-commune>
+                                <option value="">Sélectionnez votre commune</option>
+                            </select>
                         </label>
                     </div>
                 </section>
@@ -190,6 +192,7 @@
         </div>
     </form>
 </main>
+<script src="/static/kinshasa-communes.js"></script>
 <script src="/static/ajouter-vente-voiture.js"></script>
 </body>
 </html>

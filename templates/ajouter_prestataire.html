@@ -107,7 +107,9 @@
                         </div>
                         <div class="provider-form-field">
                             <label for="commune">Commune <span class="required-label">*</span></label>
-                            <input id="commune" name="commune" type="text" required autocomplete="address-level3">
+                            <select id="commune" name="commune" required autocomplete="address-level3" data-kinshasa-commune>
+                                <option value="">Sélectionnez votre commune</option>
+                            </select>
                         </div>
                         <div class="provider-form-field">
                             <label for="annees_experience">Années d’expérience</label>
@@ -213,6 +215,7 @@
         </section>
     </main>
     <script src="/static/provider-photo.js"></script>
+    <script src="/static/kinshasa-communes.js"></script>
     <script src="/static/prestataire-form.js"></script>
 </body>
 </html>
