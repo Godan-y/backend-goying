@@ -422,6 +422,21 @@ class ProviderAvailabilityUpdate(BaseModel):
     provider_availability: str = Field(alias="providerAvailability")
 
 
+class ProviderProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    full_name: str = Field(alias="fullName", min_length=1, max_length=200)
+    phone: str = Field(min_length=1, max_length=40)
+    country: str = Field(min_length=1, max_length=100)
+    city: str = Field(min_length=1, max_length=100)
+    commune: str = Field(default="", max_length=100)
+    bio: str = Field(default="", max_length=2000)
+    skills: list[str] = Field(default_factory=list, max_length=50)
+    price_rate: str = Field(alias="priceRate", default="", max_length=100)
+    avatar_url: str = Field(alias="avatarUrl", default="", max_length=2000)
+    portfolio: list[str] = Field(default_factory=list, max_length=PORTFOLIO_MAX_IMAGES)
+
+
 def _is_verified(provider) -> bool:
     return provider.to_dict().get("verified") is True or str(
         provider.to_dict().get("verified") or ""
@@ -439,10 +454,28 @@ def _find_verified_provider(firebase_user: dict):
 
     account = account_snapshot.to_dict() if account_snapshot and account_snapshot.exists else {}
     application_id = str(account.get("applicationId") or "").strip()
+    collections = ("providers", "chauffeurs")
     if application_id:
+        for collection_name in collections:
+            providers = list(
+                db.collection(collection_name)
+                .where("applicationId", "==", application_id)
+                .stream()
+            )
+            verified_provider = next(
+                (provider for provider in providers if _is_verified(provider)),
+                None,
+            )
+            if verified_provider:
+                return verified_provider
+
+    email = str(firebase_user.get("email") or "").strip().lower()
+    if not email:
+        return None
+    for collection_name in collections:
         providers = list(
-            db.collection("providers")
-            .where("applicationId", "==", application_id)
+            db.collection(collection_name)
+            .where("email", "==", email)
             .stream()
         )
         verified_provider = next(
@@ -451,19 +484,7 @@ def _find_verified_provider(firebase_user: dict):
         )
         if verified_provider:
             return verified_provider
-
-    email = str(firebase_user.get("email") or "").strip().lower()
-    if not email:
-        return None
-    providers = list(
-        db.collection("providers")
-        .where("email", "==", email)
-        .stream()
-    )
-    return next(
-        (provider for provider in providers if _is_verified(provider)),
-        None,
-    )
+    return None
 
 
 def _verified_provider_or_error(firebase_user: dict):
@@ -556,3 +577,33 @@ def update_provider_availability(
         }
     )
     return {"providerAvailability": update.provider_availability}
+
+
+@router.post("/api/provider-profile")
+def update_provider_profile(
+    update: ProviderProfileUpdate,
+    firebase_user: dict = Depends(get_current_firebase_user),
+    _user_profile: dict = Depends(require_user_profile),
+):
+    provider = _verified_provider_or_error(firebase_user)
+    provider.reference.update(
+        {
+            "name": update.full_name.strip(),
+            "phone": update.phone.strip(),
+            "country": update.country.strip(),
+            "city": update.city.strip(),
+            "commune": update.commune.strip(),
+            "bio": update.bio.strip(),
+            "skills": [skill.strip() for skill in update.skills if skill.strip()],
+            "priceRate": update.price_rate.strip(),
+            # Both canonical catalogues read one of these legacy-compatible fields.
+            "avatarUrl": update.avatar_url.strip(),
+            "photo_profil": update.avatar_url.strip(),
+            "portfolio": update.portfolio,
+            "updatedAt": datetime.now(timezone.utc),
+        }
+    )
+    return {
+        "avatarUrl": update.avatar_url.strip(),
+        "portfolio": update.portfolio,
+    }

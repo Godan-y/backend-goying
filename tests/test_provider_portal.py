@@ -279,6 +279,42 @@ class ProviderApplicationTests(unittest.TestCase):
         self.assertEqual(account["paymentStatus"], "Vérification demandée")
 
 
+class ProviderProfileUpdateTests(unittest.TestCase):
+    def test_profile_update_preserves_provider_visibility_fields(self):
+        database = FakeDatabase()
+        provider_reference = database.collection("providers").document("provider-123")
+        provider_reference.collection.documents[provider_reference.id] = {
+            "name": "Kabeya Tshal",
+            "specialty": "ménagère",
+            "verified": True,
+            "status": "disponible",
+        }
+        provider = type("VerifiedProvider", (), {"reference": provider_reference})()
+        update = provider_portal.ProviderProfileUpdate.model_validate({
+            "fullName": "Kabeya Tshal",
+            "phone": "+243812345678",
+            "country": "RDC",
+            "city": "Kinshasa",
+            "commune": "Gombe",
+            "bio": "Prestataire qualifiée.",
+            "skills": ["Ménage"],
+            "priceRate": "250$ / mois",
+            "avatarUrl": "https://gm-biblio-storage.s3.eu-west-3.amazonaws.com/avatar.jpg",
+            "portfolio": [],
+        })
+
+        with patch.object(provider_portal, "_verified_provider_or_error", return_value=provider):
+            response = provider_portal.update_provider_profile(update, {"uid": "provider-uid"}, {})
+
+        saved = provider_reference.collection.documents[provider_reference.id]
+        self.assertEqual(response["avatarUrl"], update.avatar_url)
+        self.assertEqual(saved["photo_profil"], update.avatar_url)
+        self.assertEqual(saved["avatarUrl"], update.avatar_url)
+        self.assertEqual(saved["specialty"], "ménagère")
+        self.assertTrue(saved["verified"])
+        self.assertEqual(saved["status"], "disponible")
+
+
 class ProviderPortfolioUploadTests(unittest.TestCase):
     def test_single_upload_returns_signed_and_public_urls(self):
         s3_client = FakeS3Client()
