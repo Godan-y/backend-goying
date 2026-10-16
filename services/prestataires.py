@@ -807,4 +807,7 @@ def _formater_candidature(application_id, candidature, statut):
         "description": listing.get("bio"),
         "photo_url": listing.get("avatarUrl"),
         "statut": statut,
+        "paymentStatus": candidature.get("paymentStatus", "À vérifier manuellement"),
+        "paymentVerificationRequestedAt": candidature.get("paymentVerificationRequestedAt"),
+        "paymentVerificationNote": candidature.get("paymentVerificationNote"),
     }

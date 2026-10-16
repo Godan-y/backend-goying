@@ -50,6 +50,11 @@ class FakeDocumentReference:
     def get(self, transaction=None):
         return FakeSnapshot(self.collection.documents.get(self.id))
 
+    def update(self, value):
+        if self.id not in self.collection.documents:
+            raise RuntimeError("Document does not exist")
+        self.collection.documents[self.id].update(value)
+
 
 class FakeQuery:
     def __init__(self, collection, field, value):
@@ -247,6 +252,31 @@ class ProviderApplicationTests(unittest.TestCase):
             response.json()["detail"],
             "Vous n'êtes pas encore éligible pour le moment dans cette zone.",
         )
+
+    def test_records_a_payment_verification_request_without_approving_provider(self):
+        with (
+            patch.object(provider_portal, "db", self.database),
+            patch(
+                "services.provider_portal.firestore.transactional",
+                side_effect=lambda function: function,
+            ),
+            TestClient(self.app) as client,
+        ):
+            created = client.post("/api/professional-applications", json=self.request)
+            response = client.post("/api/professional-payment-verification-requests")
+
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(response.status_code, 200)
+        application = next(iter(
+            self.database.collection("professionalApplications").documents.values()
+        ))
+        account = self.database.collection("professionalAccounts").documents[
+            self.firebase_user["uid"]
+        ]
+        self.assertEqual(application["status"], "En attente")
+        self.assertEqual(application["paymentStatus"], "Vérification demandée")
+        self.assertIn("paymentVerificationRequestedAt", application)
+        self.assertEqual(account["paymentStatus"], "Vérification demandée")
 
 
 class ProviderPortfolioUploadTests(unittest.TestCase):

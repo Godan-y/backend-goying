@@ -242,6 +242,82 @@ def create_professional_application(
     }
 
 
+def _pending_application_for_user(firebase_user: dict):
+    uid = str(firebase_user["uid"]).strip()
+    account_reference = db.collection("professionalAccounts").document(uid)
+    account_snapshot = account_reference.get()
+    if not account_snapshot.exists:
+        raise HTTPException(status_code=404, detail="Dossier prestataire introuvable.")
+    account = account_snapshot.to_dict() or {}
+    application_id = str(account.get("applicationId") or "").strip()
+    if not application_id:
+        raise HTTPException(status_code=404, detail="Dossier prestataire introuvable.")
+    application_reference = db.collection("professionalApplications").document(application_id)
+    application_snapshot = application_reference.get()
+    if not application_snapshot.exists:
+        raise HTTPException(status_code=404, detail="Dossier prestataire introuvable.")
+    application = application_snapshot.to_dict() or {}
+    if str(application.get("uid") or "").strip() != uid:
+        raise HTTPException(status_code=403, detail="Accès interdit à ce dossier prestataire.")
+    if str(application.get("status") or "").strip().lower() not in {"en attente", "en_attente"}:
+        raise HTTPException(
+            status_code=409,
+            detail="Cette demande de paiement n'est plus nécessaire pour ce dossier.",
+        )
+    return account_reference, application_reference, application
+
+
+@router.post("/api/professional-payment-status")
+def get_professional_payment_status(
+    firebase_user: dict = Depends(require_firebase_user),
+):
+    _account_reference, _application_reference, application = _pending_application_for_user(
+        firebase_user
+    )
+    return {
+        "paymentStatus": application.get("paymentStatus", "À vérifier manuellement"),
+        "paymentVerificationRequestedAt": application.get("paymentVerificationRequestedAt"),
+    }
+
+
+@router.post("/api/professional-payment-verification-requests")
+def request_professional_payment_verification(
+    firebase_user: dict = Depends(require_firebase_user),
+):
+    account_reference, application_reference, application = _pending_application_for_user(
+        firebase_user
+    )
+    requested_at = application.get("paymentVerificationRequestedAt")
+    if requested_at:
+        return {
+            "paymentStatus": application.get("paymentStatus", "Vérification demandée"),
+            "paymentVerificationRequestedAt": requested_at,
+            "message": "Votre demande de vérification est déjà en attente.",
+        }
+
+    now = datetime.now(timezone.utc)
+    update = {
+        "paymentStatus": "Vérification demandée",
+        "paymentVerificationRequestedAt": now,
+        "paymentVerificationNote": (
+            "Le prestataire déclare avoir payé. Vérifiez le paiement dans Chariow "
+            "avant d'approuver le profil."
+        ),
+        "updatedAt": now,
+    }
+    application_reference.update(update)
+    account_reference.update({
+        "paymentStatus": update["paymentStatus"],
+        "paymentVerificationRequestedAt": now,
+        "updatedAt": now,
+    })
+    return {
+        "paymentStatus": update["paymentStatus"],
+        "paymentVerificationRequestedAt": now,
+        "message": "Votre demande de vérification a été envoyée à l'administration.",
+    }
+
+
 def _validate_portfolio_upload(upload: PortfolioUploadFile) -> str:
     extension = PurePath(upload.filename).suffix.lower()
     expected_content_type = PORTFOLIO_IMAGE_TYPES.get(extension)
