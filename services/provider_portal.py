@@ -525,6 +525,36 @@ def _verified_provider_or_error(firebase_user: dict):
     return provider
 
 
+@router.get("/api/providers")
+def list_public_providers():
+    providers = []
+    for document in db.collection("providers").stream():
+        provider = document.to_dict() or {}
+        if not _is_verified(document):
+            continue
+        availability = str(
+            provider.get("providerAvailability")
+            or provider.get("availability")
+            or provider.get("status")
+            or "disponible"
+        ).strip().lower()
+        if availability == "indisponible":
+            continue
+        specialty = _public_provider_specialty(provider.get("specialty"))
+        if specialty is None:
+            specialty = _linked_application_specialty(document)
+        if specialty is None:
+            continue
+        providers.append({
+            **provider,
+            "id": document.id,
+            "specialty": specialty,
+            "status": "disponible",
+            "providerAvailability": availability,
+        })
+    return {"providers": providers}
+
+
 @router.get("/api/provider-missions")
 def list_provider_missions(
     firebase_user: dict = Depends(get_current_firebase_user),

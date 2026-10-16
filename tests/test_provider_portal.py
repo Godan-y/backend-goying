@@ -34,9 +34,10 @@ class FakeProvider:
 
 
 class FakeSnapshot:
-    def __init__(self, value=None):
+    def __init__(self, value=None, document_id=None):
         self.exists = value is not None
         self.value = value
+        self.id = document_id
 
     def to_dict(self):
         return self.value
@@ -90,6 +91,12 @@ class FakeCollection:
 
     def where(self, field, _operator, value):
         return FakeQuery(self, field, value)
+
+    def stream(self):
+        return [
+            FakeSnapshot(document, document_id)
+            for document_id, document in self.documents.items()
+        ]
 
 
 class FakeTransaction:
@@ -322,6 +329,32 @@ class ProviderProfileUpdateTests(unittest.TestCase):
         self.assertEqual(saved["specialty"], "ménagère")
         self.assertTrue(saved["verified"])
         self.assertEqual(saved["status"], "disponible")
+
+    def test_public_catalog_restores_specialty_from_linked_application(self):
+        database = FakeDatabase()
+        database.collection("professionalApplications").documents["application-1"] = {
+            "specialty": "menagere",
+        }
+        database.collection("providers").documents["provider-1"] = {
+            "applicationId": "application-1",
+            "name": "Kabeya Tshala Marie",
+            "specialty": "",
+            "verified": True,
+            "status": "disponible",
+        }
+        database.collection("providers").documents["provider-2"] = {
+            "name": "Mbuyi Ilunga Grâce",
+            "specialty": "coiffeur",
+            "verified": True,
+            "status": "disponible",
+        }
+
+        with patch.object(provider_portal, "db", database):
+            response = provider_portal.list_public_providers()
+
+        providers = {provider["id"]: provider for provider in response["providers"]}
+        self.assertEqual(providers["provider-1"]["specialty"], "ménagère")
+        self.assertEqual(providers["provider-2"]["specialty"], "coiffeur")
 
 
 class ProviderPortfolioUploadTests(unittest.TestCase):
