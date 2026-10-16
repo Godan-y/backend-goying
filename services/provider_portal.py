@@ -32,6 +32,13 @@ PORTFOLIO_IMAGE_TYPES = {
     ".png": "image/png",
     ".webp": "image/webp",
 }
+PUBLIC_PROVIDER_SPECIALTIES = {
+    "menagere": "ménagère",
+    "coiffeur": "coiffeur",
+    "maquilleuse": "maquilleuse",
+    "professeur": "professeur",
+    "chauffeur": "chauffeur",
+}
 SUPPORTED_PROVIDER_AREAS = {
     "RDC": {
         "Kinshasa": frozenset((
@@ -443,6 +450,27 @@ def _is_verified(provider) -> bool:
     ).strip().lower() == "true"
 
 
+def _public_provider_specialty(value: object) -> str | None:
+    normalized = (
+        str(value or "")
+        .strip()
+        .lower()
+        .replace("é", "e")
+        .replace("è", "e")
+    )
+    return PUBLIC_PROVIDER_SPECIALTIES.get(normalized)
+
+
+def _linked_application_specialty(provider) -> str | None:
+    application_id = str((provider.to_dict() or {}).get("applicationId") or "").strip()
+    if not application_id:
+        return None
+    application = db.collection("professionalApplications").document(application_id).get()
+    if not application.exists:
+        return None
+    return _public_provider_specialty((application.to_dict() or {}).get("specialty"))
+
+
 def _find_verified_provider(firebase_user: dict):
     user_id = str(firebase_user["uid"])
     account_snapshot = db.collection("professionalAccounts").document(user_id).get()
@@ -586,23 +614,28 @@ def update_provider_profile(
     _user_profile: dict = Depends(require_user_profile),
 ):
     provider = _verified_provider_or_error(firebase_user)
-    provider.reference.update(
-        {
-            "name": update.full_name.strip(),
-            "phone": update.phone.strip(),
-            "country": update.country.strip(),
-            "city": update.city.strip(),
-            "commune": update.commune.strip(),
-            "bio": update.bio.strip(),
-            "skills": [skill.strip() for skill in update.skills if skill.strip()],
-            "priceRate": update.price_rate.strip(),
-            # Both canonical catalogues read one of these legacy-compatible fields.
-            "avatarUrl": update.avatar_url.strip(),
-            "photo_profil": update.avatar_url.strip(),
-            "portfolio": update.portfolio,
-            "updatedAt": datetime.now(timezone.utc),
-        }
-    )
+    provider_data = provider.to_dict() or {}
+    specialty = _public_provider_specialty(provider_data.get("specialty"))
+    if specialty is None:
+        specialty = _linked_application_specialty(provider)
+    profile_update = {
+        "name": update.full_name.strip(),
+        "phone": update.phone.strip(),
+        "country": update.country.strip(),
+        "city": update.city.strip(),
+        "commune": update.commune.strip(),
+        "bio": update.bio.strip(),
+        "skills": [skill.strip() for skill in update.skills if skill.strip()],
+        "priceRate": update.price_rate.strip(),
+        # Both canonical catalogues read one of these legacy-compatible fields.
+        "avatarUrl": update.avatar_url.strip(),
+        "photo_profil": update.avatar_url.strip(),
+        "portfolio": update.portfolio,
+        "updatedAt": datetime.now(timezone.utc),
+    }
+    if specialty is not None:
+        profile_update["specialty"] = specialty
+    provider.reference.update(profile_update)
     return {
         "avatarUrl": update.avatar_url.strip(),
         "portfolio": update.portfolio,

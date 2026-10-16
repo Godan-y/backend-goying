@@ -51,6 +51,28 @@ BOOKING_STATUS_COMPLETED = "Terminé"
 BOOKING_STATUS_CANCELLED = "Annulé"
 ADMIN_MANAGED_CATEGORIES = {"chauffeur", "chauffeuse", "menagere", "ménagère"}
 VALID_MANAGEMENT_MODES = {"admin", "provider"}
+PUBLIC_PROVIDER_SPECIALTIES = {
+    "menagere": "ménagère",
+    "coiffeur": "coiffeur",
+    "maquilleuse": "maquilleuse",
+    "professeur": "professeur",
+    "chauffeur": "chauffeur",
+}
+
+
+def _public_provider_specialty(value):
+    normalized = str(value or "").strip().lower().replace("é", "e").replace("è", "e")
+    return PUBLIC_PROVIDER_SPECIALTIES.get(normalized)
+
+
+def _linked_application_specialty(provider):
+    application_id = str(provider.get("applicationId") or "").strip()
+    if not application_id:
+        return None
+    application = db.collection("professionalApplications").document(application_id).get()
+    if not application.exists:
+        return None
+    return _public_provider_specialty((application.to_dict() or {}).get("specialty"))
 
 
 class NouveauPrestataire(BaseModel):
@@ -547,6 +569,10 @@ def _lister_providers(statut: str | None = None):
         if statut is not None and provider_status != statut:
             continue
         item["id"] = document.id
+        if _public_provider_specialty(item.get("specialty")) is None:
+            specialty = _linked_application_specialty(item)
+            if specialty is not None:
+                item["specialty"] = specialty
         item["statut"] = "approuve" if statut is None else provider_status
         prestataires.append(item)
     return prestataires

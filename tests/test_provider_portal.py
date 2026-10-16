@@ -289,7 +289,16 @@ class ProviderProfileUpdateTests(unittest.TestCase):
             "verified": True,
             "status": "disponible",
         }
-        provider = type("VerifiedProvider", (), {"reference": provider_reference})()
+        provider = type(
+            "VerifiedProvider",
+            (),
+            {
+                "reference": provider_reference,
+                "to_dict": lambda self: provider_reference.collection.documents[
+                    provider_reference.id
+                ],
+            },
+        )()
         update = provider_portal.ProviderProfileUpdate.model_validate({
             "fullName": "Kabeya Tshal",
             "phone": "+243812345678",
