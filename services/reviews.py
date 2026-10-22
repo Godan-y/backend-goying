@@ -148,7 +148,7 @@ def create_booking_review(
         provider_collection = str(booking.get("providerCollection") or "").strip()
         has_provider = bool(provider_id and provider_collection in PROVIDER_COLLECTIONS)
         service_type = _normalized(booking.get("serviceType"))
-        is_property_rental = (
+        is_property_booking = (
             booking_collection == PROPERTY_BOOKING_COLLECTION
             and service_type == "immobilier"
         )
@@ -161,7 +161,8 @@ def create_booking_review(
             and has_provider
             and service_type in {"chauffeur", "service a la personne"}
         )
-        if not (is_provider_service or is_property_rental or is_car_rental):
+        has_provider = is_provider_service
+        if not (is_provider_service or is_property_booking or is_car_rental):
             raise HTTPException(
                 status_code=403,
                 detail="Cette réservation ne peut pas recevoir d'avis",
@@ -171,14 +172,14 @@ def create_booking_review(
         aggregate_data = None
         aggregate_fields = ("rating", "reviewsCount")
         aggregate_id = None
-        if is_property_rental:
+        if is_property_booking:
             aggregate_id = str(booking.get("propertyId") or booking.get("bien_id") or "").strip()
             aggregate_collection = "maisons"
             aggregate_fields = ("note", "avis")
         elif is_car_rental:
             aggregate_id = str(booking.get("vehicleId") or booking.get("bien_id") or "").strip()
             aggregate_collection = "vehicles"
-        if is_property_rental or is_car_rental:
+        if is_property_booking or is_car_rental:
             if not aggregate_id:
                 raise HTTPException(status_code=403, detail="Cette réservation ne contient aucun bien associé")
             aggregate_reference = db.collection(aggregate_collection).document(aggregate_id)
