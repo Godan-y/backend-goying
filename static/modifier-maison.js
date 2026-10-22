@@ -174,7 +174,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 'informations_complementaires', 'chambres', 'superficie', 'salles_bains',
                 'prix', 'type', 'telephone'].forEach((name) => {
                 const field = form.elements.namedItem(name);
-                if (field) field.value = house[name] ?? '';
+                if (field && name === 'commune') {
+                    window.KinshasaCommunes.setSavedValue(field, house[name]);
+                } else if (field) {
+                    field.value = house[name] ?? '';
+                }
             });
             (house.informations_personnalisees || []).forEach(addInformation);
             updateFieldsForPropertyType();

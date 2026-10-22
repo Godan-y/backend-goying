@@ -47,7 +47,11 @@
                         <div><p>ADRESSE DU BIEN</p><h2 id="edit-location-title">Localisation</h2></div>
                     </header>
                     <div class="house-edit-fields house-edit-location-fields">
-                        <label for="commune">Commune<input id="commune" name="commune" autocomplete="address-level2" placeholder="Ex. Ngaliema"></label>
+                        <label for="commune">Commune
+                            <select id="commune" name="commune" autocomplete="address-level2" data-kinshasa-commune>
+                                <option value="">Sélectionnez votre commune</option>
+                            </select>
+                        </label>
                         <label for="quartier">Quartier<input id="quartier" name="quartier" autocomplete="address-level3" placeholder="Ex. Binza"></label>
                         <label class="house-edit-field-wide" for="avenue">Avenue et numéro<input id="avenue" name="avenue" autocomplete="street-address" placeholder="Avenue et numéro de la parcelle"></label>
                     </div>
@@ -161,6 +165,7 @@
         <span id="house-photo-dialog-count"></span>
     </div>
 </dialog>
+<script src="/static/kinshasa-communes.js"></script>
 <script src="/static/modifier-maison.js"></script>
 </body>
 </html>

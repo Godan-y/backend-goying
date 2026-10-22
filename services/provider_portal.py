@@ -2,24 +2,425 @@ import logging
 import os
 import uuid
 from datetime import datetime, timezone
-from typing import Any
+from pathlib import PurePath
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
-from firebase_admin import firestore
-from pydantic import BaseModel, ConfigDict, Field, field_validator
 import boto3
+from botocore.exceptions import BotoCoreError, ClientError
+from fastapi import APIRouter, Depends, HTTPException, status
+from firebase_admin import firestore
+from google.api_core.exceptions import AlreadyExists
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from dependencies import get_current_firebase_user
+from dependencies import get_current_firebase_user, require_firebase_user, require_user_profile
 from firebase import db
 
 
 router = APIRouter(tags=["prestataire"])
 logger = logging.getLogger(__name__)
-AWS_BUCKET_NAME = os.environ.get("AWS_BUCKET_NAME", "gm-biblio-storage")
-AWS_REGION = os.environ.get("AWS_REGION", "eu-west-3")
-MAX_PORTFOLIO_IMAGE_SIZE = 5 * 1024 * 1024
-MAX_PORTFOLIO_IMAGES = 6
-ALLOWED_IMAGE_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+
+AWS_ACCESS_KEY = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+BUCKET_NAME = os.environ.get("AWS_BUCKET_NAME", "gm-biblio-storage")
+REGION = os.environ.get("AWS_REGION", "eu-west-3")
+PORTFOLIO_MAX_FILE_SIZE = 5 * 1024 * 1024
+PORTFOLIO_MAX_IMAGES = 6
+PORTFOLIO_UPLOAD_EXPIRES_SECONDS = 5 * 60
+PORTFOLIO_IMAGE_TYPES = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
+PUBLIC_PROVIDER_SPECIALTIES = {
+    "menagere": "ménagère",
+    "coiffeur": "coiffeur",
+    "maquilleuse": "maquilleuse",
+    "professeur": "professeur",
+    "chauffeur": "chauffeur",
+}
+SUPPORTED_PROVIDER_AREAS = {
+    "RDC": {
+        "Kinshasa": frozenset((
+            "Bandalungwa", "Barumbu", "Bumbu", "Gombe", "Kalamu", "Kasa-Vubu",
+            "Kimbanseke", "Kinshasa", "Kintambo", "Kisenso", "Lemba", "Limete",
+            "Lingwala", "Makala", "Maluku", "Masina", "Matete", "Mont-Ngafula",
+            "N'Djili", "Ngaba", "Ngaliema", "Ngiri-Ngiri", "N'Sele", "Selembao",
+        )),
+        "Lubumbashi": frozenset(("Annexe", "Kamalondo", "Kampemba", "Katuba", "Kenya", "Lubumbashi", "Rwashi")),
+        "Goma": frozenset(("Goma", "Karisimbi")),
+        "Kolwezi": frozenset(("Dilala", "Manika")),
+        "Matadi": frozenset(("Matadi", "Mvuzi", "Nzanza")),
+        "Bukavu": frozenset(("Bagira", "Ibanda", "Kadutu")),
+    }
+}
+
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=AWS_ACCESS_KEY,
+    aws_secret_access_key=AWS_SECRET_KEY,
+    region_name=REGION,
+)
+
+
+class PortfolioUploadFile(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    filename: str = Field(
+        min_length=1,
+        max_length=255,
+        validation_alias=AliasChoices("filename", "fileName", "file_name"),
+    )
+    content_type: str = Field(
+        validation_alias=AliasChoices("contentType", "content_type", "mimeType", "mime_type"),
+    )
+    file_size: int = Field(
+        gt=0,
+        validation_alias=AliasChoices("fileSize", "file_size", "size"),
+    )
+
+
+class PortfolioUploadRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    files: list[PortfolioUploadFile] | None = None
+    filename: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("filename", "fileName", "file_name"),
+    )
+    content_type: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("contentType", "content_type", "mimeType", "mime_type"),
+    )
+    file_size: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("fileSize", "file_size", "size"),
+    )
+
+
+class ProfessionalApplicationListing(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    name: str = Field(min_length=1, max_length=200)
+    phone: str = Field(default="", max_length=40)
+    country: str = Field(min_length=1, max_length=100)
+    city: str = Field(min_length=1, max_length=100)
+    commune: str = Field(default="", max_length=100)
+    skills: list[str] = Field(default_factory=list, max_length=50)
+    experienceYears: int = Field(
+        default=0,
+        ge=0,
+        le=80,
+    )
+
+
+class ProfessionalApplicationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    fullName: str = Field(min_length=1, max_length=200)
+    phone: str = Field(min_length=1, max_length=40)
+    specialty: Literal[
+        "chauffeur",
+        "menagere",
+        "coiffeur",
+        "maquilleuse",
+        "professeur",
+    ]
+    listing: ProfessionalApplicationListing
+
+
+def _portfolio_upload_files(request: PortfolioUploadRequest) -> list[PortfolioUploadFile]:
+    if request.files is not None:
+        if not request.files:
+            raise HTTPException(status_code=400, detail="Sélectionnez au moins une image.")
+        return request.files
+
+    if request.filename is None or request.content_type is None or request.file_size is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Fournissez un fichier avec son nom, son type et sa taille.",
+        )
+    return [
+        PortfolioUploadFile(
+            filename=request.filename,
+            content_type=request.content_type,
+            file_size=request.file_size,
+        )
+    ]
+
+
+@router.post(
+    "/api/professional-applications",
+    status_code=status.HTTP_201_CREATED,
+)
+def create_professional_application(
+    request: ProfessionalApplicationRequest,
+    firebase_user: dict = Depends(require_firebase_user),
+):
+    uid = str(firebase_user["uid"]).strip()
+    full_name = request.fullName.strip()
+    phone = request.phone.strip()
+    if not full_name or not phone:
+        raise HTTPException(status_code=422, detail="Nom complet et téléphone obligatoires")
+
+    listing = request.listing.model_dump()
+    supported_cities = SUPPORTED_PROVIDER_AREAS.get(request.listing.country)
+    supported_subdivisions = supported_cities.get(request.listing.city) if supported_cities else None
+    if supported_subdivisions is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Vous n'êtes pas encore éligible pour le moment dans cette zone.",
+        )
+    if request.listing.commune not in supported_subdivisions:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="La commune sélectionnée ne correspond pas à la ville choisie.",
+        )
+    listing["phone"] = phone
+    application_collection = db.collection("professionalApplications")
+    account_reference = db.collection("professionalAccounts").document(uid)
+    application_reference = application_collection.document()
+    now = datetime.now(timezone.utc)
+    application = {
+        "uid": uid,
+        "status": "En attente",
+        "paymentStatus": "À vérifier manuellement",
+        "specialty": request.specialty,
+        "session": {
+            "uid": uid,
+            "email": str(firebase_user.get("email") or "").strip().lower(),
+            "fullName": full_name,
+            "phone": phone,
+        },
+        "listing": listing,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    account = {
+        "uid": uid,
+        "applicationId": application_reference.id,
+        "status": "En attente",
+        "paymentStatus": "À vérifier manuellement",
+        "createdAt": now,
+        "updatedAt": now,
+    }
+
+    try:
+        existing_applications = (
+            application_collection.where("uid", "==", uid).limit(1).stream()
+        )
+        if next(iter(existing_applications), None) is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Une candidature prestataire existe déjà pour ce compte.",
+            )
+
+        transaction = db.transaction()
+
+        @firestore.transactional
+        def save_application(transaction):
+            if account_reference.get(transaction=transaction).exists:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Une candidature prestataire existe déjà pour ce compte.",
+                )
+            transaction.create(application_reference, application)
+            transaction.create(account_reference, account)
+
+        save_application(transaction)
+    except HTTPException:
+        raise
+    except AlreadyExists as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Une candidature prestataire existe déjà pour ce compte.",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Impossible d'enregistrer la candidature prestataire pour %s", uid)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="L'enregistrement de votre candidature est temporairement indisponible.",
+        ) from exc
+
+    return {
+        "applicationId": application_reference.id,
+        "status": application["status"],
+        "paymentStatus": application["paymentStatus"],
+    }
+
+
+def _pending_application_for_user(firebase_user: dict):
+    uid = str(firebase_user["uid"]).strip()
+    account_reference = db.collection("professionalAccounts").document(uid)
+    account_snapshot = account_reference.get()
+    if not account_snapshot.exists:
+        raise HTTPException(status_code=404, detail="Dossier prestataire introuvable.")
+    account = account_snapshot.to_dict() or {}
+    application_id = str(account.get("applicationId") or "").strip()
+    if not application_id:
+        raise HTTPException(status_code=404, detail="Dossier prestataire introuvable.")
+    application_reference = db.collection("professionalApplications").document(application_id)
+    application_snapshot = application_reference.get()
+    if not application_snapshot.exists:
+        raise HTTPException(status_code=404, detail="Dossier prestataire introuvable.")
+    application = application_snapshot.to_dict() or {}
+    if str(application.get("uid") or "").strip() != uid:
+        raise HTTPException(status_code=403, detail="Accès interdit à ce dossier prestataire.")
+    if str(application.get("status") or "").strip().lower() not in {"en attente", "en_attente"}:
+        raise HTTPException(
+            status_code=409,
+            detail="Cette demande de paiement n'est plus nécessaire pour ce dossier.",
+        )
+    return account_reference, application_reference, application
+
+
+@router.post("/api/professional-payment-status")
+def get_professional_payment_status(
+    firebase_user: dict = Depends(require_firebase_user),
+):
+    _account_reference, _application_reference, application = _pending_application_for_user(
+        firebase_user
+    )
+    return {
+        "paymentStatus": application.get("paymentStatus", "À vérifier manuellement"),
+        "paymentVerificationRequestedAt": application.get("paymentVerificationRequestedAt"),
+    }
+
+
+@router.post("/api/professional-payment-verification-requests")
+def request_professional_payment_verification(
+    firebase_user: dict = Depends(require_firebase_user),
+):
+    account_reference, application_reference, application = _pending_application_for_user(
+        firebase_user
+    )
+    requested_at = application.get("paymentVerificationRequestedAt")
+    if requested_at:
+        return {
+            "paymentStatus": application.get("paymentStatus", "Vérification demandée"),
+            "paymentVerificationRequestedAt": requested_at,
+            "message": "Votre demande de vérification est déjà en attente.",
+        }
+
+    now = datetime.now(timezone.utc)
+    update = {
+        "paymentStatus": "Vérification demandée",
+        "paymentVerificationRequestedAt": now,
+        "paymentVerificationNote": (
+            "Le prestataire déclare avoir payé. Vérifiez le paiement dans Chariow "
+            "avant d'approuver le profil."
+        ),
+        "updatedAt": now,
+    }
+    application_reference.update(update)
+    account_reference.update({
+        "paymentStatus": update["paymentStatus"],
+        "paymentVerificationRequestedAt": now,
+        "updatedAt": now,
+    })
+    return {
+        "paymentStatus": update["paymentStatus"],
+        "paymentVerificationRequestedAt": now,
+        "message": "Votre demande de vérification a été envoyée à l'administration.",
+    }
+
+
+def _validate_portfolio_upload(upload: PortfolioUploadFile) -> str:
+    extension = PurePath(upload.filename).suffix.lower()
+    expected_content_type = PORTFOLIO_IMAGE_TYPES.get(extension)
+    if expected_content_type is None or upload.content_type.lower() != expected_content_type:
+        raise HTTPException(
+            status_code=415,
+            detail="Seules les images JPEG, PNG et WebP sont autorisées.",
+        )
+    if upload.file_size > PORTFOLIO_MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="Chaque image du portfolio doit faire au maximum 5 Mo.",
+        )
+    return extension
+
+
+def _portfolio_image_count(provider_id: str) -> int:
+    prefix = f"goying/prestataires/{provider_id}/portfolio/"
+    try:
+        paginator = s3_client.get_paginator("list_objects_v2")
+        return sum(
+            1
+            for page in paginator.paginate(Bucket=BUCKET_NAME, Prefix=prefix)
+            for item in page.get("Contents", [])
+            if item.get("Key") and not str(item["Key"]).endswith("/")
+        )
+    except (BotoCoreError, ClientError) as exc:
+        logger.exception("Impossible de vérifier le nombre d'images du portfolio")
+        raise HTTPException(
+            status_code=503,
+            detail="Le portfolio est temporairement indisponible. Réessayez.",
+        ) from exc
+
+
+@router.post("/api/portfolio-uploads")
+def create_portfolio_upload_urls(
+    request: PortfolioUploadRequest,
+    firebase_user: dict = Depends(get_current_firebase_user),
+    _user_profile: dict = Depends(require_user_profile),
+):
+    provider = _verified_provider_or_error(firebase_user)
+    uploads = _portfolio_upload_files(request)
+    if len(uploads) > PORTFOLIO_MAX_IMAGES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Le portfolio est limité à {PORTFOLIO_MAX_IMAGES} images.",
+        )
+
+    extensions = [_validate_portfolio_upload(upload) for upload in uploads]
+    existing_count = _portfolio_image_count(provider.id)
+    if existing_count + len(uploads) > PORTFOLIO_MAX_IMAGES:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Le portfolio contient déjà {existing_count} image(s). "
+            f"La limite est de {PORTFOLIO_MAX_IMAGES}.",
+        )
+
+    public_base_url = f"https://{BUCKET_NAME}.s3.{REGION}.amazonaws.com"
+    signed_uploads = []
+    try:
+        for upload, extension in zip(uploads, extensions):
+            object_key = (
+                f"goying/prestataires/{provider.id}/portfolio/{uuid.uuid4().hex}{extension}"
+            )
+            upload_url = s3_client.generate_presigned_url(
+                "put_object",
+                Params={
+                    "Bucket": BUCKET_NAME,
+                    "Key": object_key,
+                    "ContentType": upload.content_type.lower(),
+                    "ContentLength": upload.file_size,
+                },
+                ExpiresIn=PORTFOLIO_UPLOAD_EXPIRES_SECONDS,
+            )
+            public_url = f"{public_base_url}/{object_key}"
+            signed_uploads.append({
+                "uploadUrl": upload_url,
+                "publicUrl": public_url,
+                "key": object_key,
+                "method": "PUT",
+                "headers": {
+                    "Content-Type": upload.content_type.lower(),
+                },
+                "expiresIn": PORTFOLIO_UPLOAD_EXPIRES_SECONDS,
+            })
+    except (BotoCoreError, ClientError) as exc:
+        logger.exception("Impossible de préparer l'upload du portfolio du prestataire %s", provider.id)
+        raise HTTPException(
+            status_code=502,
+            detail="Impossible de préparer l’envoi vers le stockage. Réessayez.",
+        ) from exc
+
+    response = {"uploads": signed_uploads}
+    if len(signed_uploads) == 1:
+        response.update(signed_uploads[0])
+    return response
 
 
 class ProviderAvailabilityUpdate(BaseModel):
@@ -28,37 +429,46 @@ class ProviderAvailabilityUpdate(BaseModel):
     provider_availability: str = Field(alias="providerAvailability")
 
 
-class UploadImageRequest(BaseModel):
-    content_type: str = Field(alias="contentType")
+class ProviderProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
-
-class PortfolioUploadRequest(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    upload_type: str = Field(alias="uploadType")
-    images: list[UploadImageRequest]
-
-    @field_validator("upload_type")
-    @classmethod
-    def validate_upload_type(cls, value: str) -> str:
-        if value not in {"avatar", "portfolio"}:
-            raise ValueError("Type d'image invalide")
-        return value
-
-
-class ProfessionalApplicationRequest(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    full_name: str = Field(alias="fullName", min_length=1, max_length=160)
-    phone: str = Field(min_length=8, max_length=32)
-    specialty: str = Field(min_length=1, max_length=40)
-    listing: dict[str, Any]
+    full_name: str = Field(alias="fullName", min_length=1, max_length=200)
+    phone: str = Field(min_length=1, max_length=40)
+    country: str = Field(min_length=1, max_length=100)
+    city: str = Field(min_length=1, max_length=100)
+    commune: str = Field(default="", max_length=100)
+    bio: str = Field(default="", max_length=2000)
+    skills: list[str] = Field(default_factory=list, max_length=50)
+    price_rate: str = Field(alias="priceRate", default="", max_length=100)
+    avatar_url: str = Field(alias="avatarUrl", default="", max_length=2000)
+    portfolio: list[str] = Field(default_factory=list, max_length=PORTFOLIO_MAX_IMAGES)
 
 
 def _is_verified(provider) -> bool:
     return provider.to_dict().get("verified") is True or str(
         provider.to_dict().get("verified") or ""
     ).strip().lower() == "true"
+
+
+def _public_provider_specialty(value: object) -> str | None:
+    normalized = (
+        str(value or "")
+        .strip()
+        .lower()
+        .replace("é", "e")
+        .replace("è", "e")
+    )
+    return PUBLIC_PROVIDER_SPECIALTIES.get(normalized)
+
+
+def _linked_application_specialty(provider) -> str | None:
+    application_id = str((provider.to_dict() or {}).get("applicationId") or "").strip()
+    if not application_id:
+        return None
+    application = db.collection("professionalApplications").document(application_id).get()
+    if not application.exists:
+        return None
+    return _public_provider_specialty((application.to_dict() or {}).get("specialty"))
 
 
 def _find_verified_provider(firebase_user: dict):
@@ -72,10 +482,28 @@ def _find_verified_provider(firebase_user: dict):
 
     account = account_snapshot.to_dict() if account_snapshot and account_snapshot.exists else {}
     application_id = str(account.get("applicationId") or "").strip()
+    collections = ("providers", "chauffeurs")
     if application_id:
+        for collection_name in collections:
+            providers = list(
+                db.collection(collection_name)
+                .where("applicationId", "==", application_id)
+                .stream()
+            )
+            verified_provider = next(
+                (provider for provider in providers if _is_verified(provider)),
+                None,
+            )
+            if verified_provider:
+                return verified_provider
+
+    email = str(firebase_user.get("email") or "").strip().lower()
+    if not email:
+        return None
+    for collection_name in collections:
         providers = list(
-            db.collection("providers")
-            .where("applicationId", "==", application_id)
+            db.collection(collection_name)
+            .where("email", "==", email)
             .stream()
         )
         verified_provider = next(
@@ -84,19 +512,7 @@ def _find_verified_provider(firebase_user: dict):
         )
         if verified_provider:
             return verified_provider
-
-    email = str(firebase_user.get("email") or "").strip().lower()
-    if not email:
-        return None
-    providers = list(
-        db.collection("providers")
-        .where("email", "==", email)
-        .stream()
-    )
-    return next(
-        (provider for provider in providers if _is_verified(provider)),
-        None,
-    )
+    return None
 
 
 def _verified_provider_or_error(firebase_user: dict):
@@ -109,172 +525,41 @@ def _verified_provider_or_error(firebase_user: dict):
     return provider
 
 
-def _own_payment_application(firebase_user: dict):
-    account_ref = db.collection("professionalAccounts").document(firebase_user["uid"])
-    account_snapshot = account_ref.get()
-    if not account_snapshot.exists:
-        raise HTTPException(status_code=404, detail="Aucun dossier prestataire n'a été trouvé")
-    account = account_snapshot.to_dict() or {}
-    application_id = str(account.get("applicationId") or "").strip()
-    if not application_id:
-        raise HTTPException(status_code=404, detail="Aucun dossier de paiement n'a été trouvé")
-    application_ref = db.collection("professionalApplications").document(application_id)
-    application_snapshot = application_ref.get()
-    if not application_snapshot.exists:
-        raise HTTPException(status_code=404, detail="Aucun dossier de paiement n'a été trouvé")
-    application = application_snapshot.to_dict() or {}
-    if (application.get("session") or {}).get("uid") != firebase_user["uid"]:
-        raise HTTPException(status_code=403, detail="Accès interdit à ce dossier")
-    return application_ref, application
-
-
-@router.post("/api/professional-payment-status")
-def professional_payment_status(firebase_user: dict = Depends(get_current_firebase_user)):
-    _, application = _own_payment_application(firebase_user)
-    return {
-        "paymentStatus": str(application.get("paymentStatus") or "À vérifier manuellement"),
-        "paymentVerificationRequestedAt": application.get("paymentVerificationRequestedAt"),
-    }
-
-
-@router.post("/api/professional-payment-verification-requests", status_code=201)
-def request_professional_payment_verification(firebase_user: dict = Depends(get_current_firebase_user)):
-    reference, application = _own_payment_application(firebase_user)
-    try:
-        transaction = db.transaction()
-
-        @firestore.transactional
-        def save_request(transaction):
-            current = reference.get(transaction=transaction)
-            current_data = current.to_dict() or {}
-            if current_data.get("paymentVerificationRequestedAt"):
-                raise HTTPException(status_code=409, detail="Une demande de vérification est déjà en cours")
-            if str(current_data.get("paymentStatus") or "").strip().lower() in {"payé", "paye", "confirmé", "confirme"}:
-                raise HTTPException(status_code=409, detail="Le paiement est déjà marqué comme confirmé")
-            now = datetime.now(timezone.utc)
-            transaction.update(reference, {"paymentVerificationRequestedAt": now})
-            return now
-
-        requested_at = save_request(transaction)
-        return {
-            "paymentStatus": "Vérification demandée",
-            "paymentVerificationRequestedAt": requested_at.isoformat(),
-        }
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.exception("Impossible d'enregistrer la demande de vérification de paiement")
-        raise HTTPException(status_code=503, detail="La demande de vérification n'a pas pu être enregistrée") from exc
-
-
-@router.post("/api/professional-session")
-def professional_session(firebase_user: dict = Depends(get_current_firebase_user)):
-    account_ref = db.collection("professionalAccounts").document(firebase_user["uid"])
-    snapshot = account_ref.get()
-    if not snapshot.exists:
-        return {"providerStatus": "Non inscrit"}
-    account = snapshot.to_dict() or {}
-    if str(account.get("uid") or snapshot.id) != firebase_user["uid"]:
-        raise HTTPException(status_code=403, detail="Accès interdit à ce dossier")
-    result = {
-        "email": str(account.get("email") or firebase_user.get("email") or ""),
-        "fullName": str(account.get("fullName") or ""),
-        "specialty": str(account.get("specialty") or ""),
-        "providerStatus": str(account.get("status") or "En attente"),
-    }
-    provider = _find_verified_provider(firebase_user)
-    if provider is not None:
-        listing = provider.to_dict() or {}
-        listing["id"] = provider.id
-        result["providerStatus"] = "Confirmé"
-        result["providerListing"] = listing
-    return result
-
-
-@router.post("/api/professional-applications", status_code=201)
-def create_professional_application(
-    request: ProfessionalApplicationRequest,
-    firebase_user: dict = Depends(get_current_firebase_user),
-):
-    specialty = request.specialty.strip().lower()
-    if specialty not in {"chauffeur", "menagere", "coiffeur", "maquilleuse", "professeur"}:
-        raise HTTPException(status_code=400, detail="Spécialité invalide")
-    if not request.phone.strip().startswith("+"):
-        raise HTTPException(status_code=400, detail="Le numéro WhatsApp doit utiliser le format international")
-
-    allowed_listing_fields = {
-        "name", "specialty", "priceRate", "pricePerMonth", "currency", "priceNegotiable",
-        "vehicleModel", "serviceType", "transmission", "experienceYears", "skills",
-        "country", "city", "commune", "zones", "bio", "phone", "managementMode",
-    }
-    listing = {
-        key: value for key, value in request.listing.items()
-        if key in allowed_listing_fields
-    }
-    if not listing:
-        raise HTTPException(status_code=400, detail="Informations de profil manquantes")
-
-    application_id = f"application-{uuid.uuid4().hex}"
-    account_reference = db.collection("professionalAccounts").document(firebase_user["uid"])
-    application_reference = db.collection("professionalApplications").document(application_id)
-    transaction = db.transaction()
-
-    @firestore.transactional
-    def save_application(transaction):
-        if account_reference.get(transaction=transaction).exists:
-            raise HTTPException(status_code=409, detail="Un dossier prestataire existe déjà pour ce compte")
-
-        listing["id"] = f"provider-{uuid.uuid4().hex}"
-        listing["name"] = request.full_name.strip()
-        listing["phone"] = request.phone.strip()
-        listing["verified"] = False
-        listing["status"] = "indisponible"
-        listing["managementMode"] = "admin" if specialty in {"chauffeur", "menagere"} else "provider"
-
-        session = {
-            "uid": firebase_user["uid"],
-            "email": str(firebase_user.get("email") or "").strip().lower(),
-            "fullName": request.full_name.strip(),
-            "role": "prestataire",
+@router.get("/api/providers")
+def list_public_providers():
+    providers = []
+    for document in db.collection("providers").stream():
+        provider = document.to_dict() or {}
+        if not _is_verified(document):
+            continue
+        availability = str(
+            provider.get("providerAvailability")
+            or provider.get("availability")
+            or provider.get("status")
+            or "disponible"
+        ).strip().lower()
+        if availability == "indisponible":
+            continue
+        specialty = _public_provider_specialty(provider.get("specialty"))
+        if specialty is None:
+            specialty = _linked_application_specialty(document)
+        if specialty is None:
+            continue
+        providers.append({
+            **provider,
+            "id": document.id,
             "specialty": specialty,
-            "phone": request.phone.strip(),
-        }
-        now = datetime.now(timezone.utc)
-        transaction.create(application_reference, {
-            "id": application_id,
-            "session": session,
-            "listing": listing,
-            "specialty": specialty,
-            "status": "En attente",
-            "submittedAt": now,
-            "paymentStatus": "À vérifier manuellement",
+            "status": "disponible",
+            "providerAvailability": availability,
         })
-        transaction.create(account_reference, {
-            "uid": firebase_user["uid"],
-            "email": session["email"],
-            "fullName": session["fullName"],
-            "role": "prestataire",
-            "specialty": specialty,
-            "status": "En attente",
-            "applicationId": application_id,
-            "createdAt": now,
-        })
-
-    try:
-        save_application(transaction)
-        return {"id": application_id, "status": "En attente"}
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.exception("Impossible de créer le dossier prestataire")
-        raise HTTPException(
-            status_code=503,
-            detail="Votre dossier n'a pas pu être enregistré",
-        ) from exc
+    return {"providers": providers}
 
 
 @router.get("/api/provider-missions")
-def list_provider_missions(firebase_user: dict = Depends(get_current_firebase_user)):
+def list_provider_missions(
+    firebase_user: dict = Depends(get_current_firebase_user),
+    _user_profile: dict = Depends(require_user_profile),
+):
     provider = _verified_provider_or_error(firebase_user)
     try:
         missions = []
@@ -297,6 +582,7 @@ def list_provider_missions(firebase_user: dict = Depends(get_current_firebase_us
 def request_provider_completion(
     booking_id: str,
     firebase_user: dict = Depends(get_current_firebase_user),
+    _user_profile: dict = Depends(require_user_profile),
 ):
     if not booking_id or len(booking_id) > 128:
         raise HTTPException(status_code=400, detail="Mission invalide")
@@ -336,6 +622,7 @@ def request_provider_completion(
 def update_provider_availability(
     update: ProviderAvailabilityUpdate,
     firebase_user: dict = Depends(get_current_firebase_user),
+    _user_profile: dict = Depends(require_user_profile),
 ):
     if update.provider_availability not in {"disponible", "indisponible"}:
         raise HTTPException(status_code=400, detail="Disponibilité invalide")
@@ -350,98 +637,36 @@ def update_provider_availability(
     return {"providerAvailability": update.provider_availability}
 
 
-@router.post("/api/portfolio-uploads")
-def prepare_portfolio_uploads(
-    request: PortfolioUploadRequest,
-    firebase_user: dict = Depends(get_current_firebase_user),
-):
-    _verified_provider_or_error(firebase_user)
-    maximum_image_count = 1 if request.upload_type == "avatar" else MAX_PORTFOLIO_IMAGES
-    if not request.images or len(request.images) > maximum_image_count:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Envoyez entre 1 et {maximum_image_count} image{'s' if maximum_image_count > 1 else ''}",
-        )
-    if any(image.content_type not in ALLOWED_IMAGE_TYPES for image in request.images):
-        raise HTTPException(
-            status_code=400,
-            detail="Seules les images JPEG, PNG et WebP sont acceptées",
-        )
-
-    try:
-        s3_client = boto3.client(
-            "s3",
-            aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
-            region_name=AWS_REGION,
-        )
-        folder = "avatars" if request.upload_type == "avatar" else "portfolios"
-        uploads = []
-        for image in request.images:
-            key = f"goying/{folder}/{firebase_user['uid']}/{uuid.uuid4()}.{ALLOWED_IMAGE_TYPES[image.content_type]}"
-            signed_post = s3_client.generate_presigned_post(
-                Bucket=AWS_BUCKET_NAME,
-                Key=key,
-                Fields={"Content-Type": image.content_type},
-                Conditions=[
-                    ["content-length-range", 1, MAX_PORTFOLIO_IMAGE_SIZE],
-                    {"Content-Type": image.content_type},
-                ],
-                ExpiresIn=300,
-            )
-            uploads.append({
-                **signed_post,
-                "publicUrl": f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{key}",
-            })
-        return {"uploads": uploads}
-    except Exception as exc:
-        logger.exception("Impossible de préparer les uploads S3 du prestataire")
-        raise HTTPException(
-            status_code=503,
-            detail="Impossible de préparer l'envoi des images",
-        ) from exc
-
-
-class ProviderProfileUpdate(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    full_name: str = Field(alias="fullName", min_length=1, max_length=160)
-    phone: str = Field(min_length=8, max_length=32)
-    country: str = Field(max_length=120)
-    city: str = Field(max_length=120)
-    commune: str = Field(max_length=120)
-    bio: str = Field(max_length=2000)
-    skills: list[str] = Field(max_length=30)
-    price_rate: str = Field(alias="priceRate", max_length=120)
-    avatar_url: str = Field(alias="avatarUrl", max_length=2048)
-    portfolio: list[str] = Field(max_length=6)
-
-
 @router.post("/api/provider-profile")
 def update_provider_profile(
-    request: ProviderProfileUpdate,
+    update: ProviderProfileUpdate,
     firebase_user: dict = Depends(get_current_firebase_user),
+    _user_profile: dict = Depends(require_user_profile),
 ):
     provider = _verified_provider_or_error(firebase_user)
-    values = {
-        "name": request.full_name.strip(),
-        "phone": request.phone.strip(),
-        "country": request.country.strip(),
-        "city": request.city.strip(),
-        "commune": request.commune.strip(),
-        "bio": request.bio.strip(),
-        "skills": [skill.strip()[:120] for skill in request.skills if skill.strip()],
-        "priceRate": request.price_rate.strip(),
-        "avatarUrl": request.avatar_url.strip(),
-        "photo_profil": request.avatar_url.strip(),
-        "portfolio": [url.strip() for url in request.portfolio if url.strip()],
+    provider_data = provider.to_dict() or {}
+    specialty = _public_provider_specialty(provider_data.get("specialty"))
+    if specialty is None:
+        specialty = _linked_application_specialty(provider)
+    profile_update = {
+        "name": update.full_name.strip(),
+        "phone": update.phone.strip(),
+        "country": update.country.strip(),
+        "city": update.city.strip(),
+        "commune": update.commune.strip(),
+        "bio": update.bio.strip(),
+        "skills": [skill.strip() for skill in update.skills if skill.strip()],
+        "priceRate": update.price_rate.strip(),
+        # Both canonical catalogues read one of these legacy-compatible fields.
+        "avatarUrl": update.avatar_url.strip(),
+        "photo_profil": update.avatar_url.strip(),
+        "portfolio": update.portfolio,
         "updatedAt": datetime.now(timezone.utc),
     }
-    if any(len(url) > 2048 for url in values["portfolio"]):
-        raise HTTPException(status_code=400, detail="Une adresse d'image est trop longue")
-    try:
-        provider.reference.update(values)
-    except Exception as exc:
-        logger.exception("Impossible de mettre à jour le profil prestataire")
-        raise HTTPException(status_code=503, detail="Le profil n'a pas pu être mis à jour") from exc
-    return {"avatarUrl": values["avatarUrl"], "portfolio": values["portfolio"]}
+    if specialty is not None:
+        profile_update["specialty"] = specialty
+    provider.reference.update(profile_update)
+    return {
+        "avatarUrl": update.avatar_url.strip(),
+        "portfolio": update.portfolio,
+    }

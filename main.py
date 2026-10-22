@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,15 +8,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from auth import create_access_token, verify_password
+from booking_cancellation import router as booking_cancellation_router
 from firebase import db
 from services.dashboards import router as dashboards_router
+from services.client_api import router as client_api_router
 from services.prestataires import router as prestataires_router
 from services.provider_portal import router as provider_portal_router
-from services.client_api import router as client_api_router
-from services.booking_cancellation import router as booking_cancellation_router
 from services.maisons import router as maisons_router
 from services.reviews import router as reviews_router
-from services.public_reviews import router as public_reviews_router
+from services.admin_users import router as admin_users_router
+from services.admin_ui import router as admin_ui_router
 from services.voitures import router as voitures_router
 app = FastAPI(title="Plateforme de services")
 app.add_middleware(
@@ -24,16 +25,21 @@ app.add_middleware(
     allow_origins=[
         "https://goyingservices.com",
         "https://www.goyingservices.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 app.include_router(reviews_router)
-app.include_router(public_reviews_router)
-app.include_router(provider_portal_router)
 app.include_router(client_api_router)
 app.include_router(booking_cancellation_router)
+app.include_router(provider_portal_router)
+app.include_router(admin_users_router)
+app.include_router(admin_ui_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -265,16 +271,16 @@ def login(data: LoginRequest):
         raise HTTPException(status_code=401, detail="Mot de passe incorrect")
 
     if str(gestionnaire.get("statut", "")).strip().lower() != "actif":
-        raise HTTPException(status_code=403, detail="Votre compte est dÃ©sactivÃ©")
+        raise HTTPException(status_code=403, detail="Votre compte est désactivé")
 
     role = str(gestionnaire.get("role", "")).strip().lower()
     redirect = ROLE_REDIRECTS.get(role)
 
     if not redirect:
-        raise HTTPException(status_code=403, detail="RÃ´le non reconnu")
+        raise HTTPException(status_code=403, detail="Rôle non reconnu")
 
     return {
-        "message": "Connexion rÃ©ussie",
+        "message": "Connexion réussie",
         "nom": gestionnaire["nom"],
         "role": role,
         "redirect": redirect,
@@ -312,4 +318,3 @@ app.include_router(dashboards_router)
 app.include_router(prestataires_router)
 app.include_router(maisons_router)
 app.include_router(voitures_router)
-

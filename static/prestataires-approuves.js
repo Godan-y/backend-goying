@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderProvider(provider) {
         const name = displayName(provider);
-        const imageUrl = firstText(provider.avatarUrl, provider.photo_url, provider.photo, provider.profileImageUrl);
+        const imageUrl = firstText(provider.photo_profil, provider.avatarUrl, provider.photo_url, provider.photo, provider.profileImageUrl);
         const category = categoryOf(provider);
         const status = availabilityOf(provider);
         const phone = firstText(provider.phone, provider.telephone);

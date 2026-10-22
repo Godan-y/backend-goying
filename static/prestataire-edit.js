@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const page = document.querySelector('[data-provider-edit]');
     const form = document.querySelector('#provider-edit-form');
+    const photoEditor = window.initializeProviderPhotoEditor(
+        document.querySelector('[data-provider-photo-editor]'),
+    );
+    const photoError = document.querySelector('[data-provider-photo-error]');
     const status = document.querySelector('#form-status');
     const logoutButton = document.querySelector('#logout-button');
     const token = localStorage.getItem('goying_access_token');
@@ -63,7 +67,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const value = field === 'competences' && !provider.competences && Array.isArray(provider.skills)
                     ? provider.skills.join(', ')
                     : firstValue(provider, names);
-                form.elements[field].value = value;
+                if (field === 'commune') {
+                    window.KinshasaCommunes.setSavedValue(form.elements[field], value);
+                } else {
+                    form.elements[field].value = value;
+                }
             });
             if (!form.elements.nom.value && provider.name) {
                 const nameParts = String(provider.name).trim().split(/\s+/);
@@ -72,12 +80,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (!form.elements.pays.value && provider.location) {
                 const locationParts = String(provider.location).split(' - ').map((part) => part.trim());
-                [form.elements.commune.value, form.elements.ville.value, form.elements.pays.value] = locationParts;
+                window.KinshasaCommunes.setSavedValue(form.elements.commune, locationParts[0]);
+                form.elements.ville.value = locationParts[1] || '';
+                form.elements.pays.value = locationParts[2] || '';
             }
             const category = String(provider.categorie || provider.specialty || '').toLowerCase();
             form.elements.type.value = category.includes('chauffeur')
                 ? 'chauffeur'
                 : 'menagere';
+            photoEditor.setCurrentPhoto(provider.photo_profil || '');
             form.elements.prix_negociable.checked = Boolean(
                 provider.prixNegociable ?? provider.priceNegotiable,
             );
@@ -95,34 +106,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(form);
         submitButton.disabled = true;
         status.className = 'form-message';
+        if (photoError.textContent) {
+            status.className = 'form-message error';
+            status.textContent = photoError.textContent;
+            submitButton.disabled = false;
+            return;
+        }
         status.textContent = 'Enregistrement en cours...';
 
         try {
+            const photoData = await photoEditor.readDataUrl();
+            const updates = {
+                nom: formData.get('nom') || '',
+                post_nom: formData.get('post_nom') || '',
+                prenom: formData.get('prenom') || '',
+                telephone: formData.get('telephone') || '',
+                description: formData.get('description') || '',
+                pays: formData.get('pays') || '',
+                ville: formData.get('ville') || '',
+                commune: formData.get('commune') || '',
+                annees_experience: formData.get('annees_experience') || '',
+                competences: formData.get('competences') || '',
+                tarif_mensuel: formData.get('tarif_mensuel') || '',
+                prix_negociable: formData.get('prix_negociable') === 'on',
+                permis_conduire: formData.get('permis_conduire') || '',
+                type_service: formData.get('type_service') || '',
+                transmission: formData.get('transmission') || '',
+                modele_vehicule: formData.get('modele_vehicule') || '',
+                type: formData.get('type') || '',
+            };
+            if (photoData) updates.photo_profil_data = photoData;
             const response = await fetch(`/prestataires/api/${encodeURIComponent(providerId)}`, {
                 method: 'PUT',
                 headers: {
                     Authorization: 'Bearer ' + token,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    nom: formData.get('nom') || '',
-                    post_nom: formData.get('post_nom') || '',
-                    prenom: formData.get('prenom') || '',
-                    telephone: formData.get('telephone') || '',
-                    description: formData.get('description') || '',
-                    pays: formData.get('pays') || '',
-                    ville: formData.get('ville') || '',
-                    commune: formData.get('commune') || '',
-                    annees_experience: formData.get('annees_experience') || '',
-                    competences: formData.get('competences') || '',
-                    tarif_mensuel: formData.get('tarif_mensuel') || '',
-                    prix_negociable: formData.get('prix_negociable') === 'on',
-                    permis_conduire: formData.get('permis_conduire') || '',
-                    type_service: formData.get('type_service') || '',
-                    transmission: formData.get('transmission') || '',
-                    modele_vehicule: formData.get('modele_vehicule') || '',
-                    type: formData.get('type') || '',
-                }),
+                body: JSON.stringify(updates),
             });
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.detail || 'Impossible de modifier le prestataire');

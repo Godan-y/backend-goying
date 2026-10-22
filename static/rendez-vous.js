@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const pricingConditions = firstValue(appointment, ['pricingConditions', 'tariffConditions', 'costDetails', 'fareDetails', 'priceDescription']);
         const status = clean(appointment.status) || 'Statut non renseigné';
         const statusClass = statusClassName(statusGroup(status));
-        const photo = clean(provider.avatarUrl || provider.photo_url || provider.photo || appointment.providerPhoto);
+        const photo = clean(provider.photo_profil || provider.avatarUrl || provider.photo_url || provider.photo || appointment.providerPhoto);
         const initial = providerName ? providerName.charAt(0).toLocaleUpperCase('fr') : 'P';
         const id = bookingDocumentId(appointment);
         const waPhone = normalizeWhatsAppPhone(providerPhone);
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const specialty = firstValue(provider, ['specialty', 'categorie', 'specialite']);
         const phone = firstValue(provider, ['phone', 'telephone']);
         const email = clean(provider.email);
-        const avatar = clean(provider.avatarUrl || provider.photo_url || provider.photo);
+        const avatar = clean(provider.photo_profil || provider.avatarUrl || provider.photo_url || provider.photo);
         const profileRows = [
             infoRow('Spécialité', specialty),
             infoRow('Compétences', skills),

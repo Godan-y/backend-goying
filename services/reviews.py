@@ -1,11 +1,12 @@
 import logging
 import unicodedata
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from firebase_admin import firestore
 from pydantic import BaseModel, ConfigDict, Field
 
-from dependencies import get_current_firebase_user
+from dependencies import get_current_firebase_user, require_user_profile
 from firebase import db
 
 
@@ -36,10 +37,64 @@ def _is_completed(booking: dict) -> bool:
     }
 
 
+def _timestamp_to_iso(value: object) -> str | None:
+    if isinstance(value, datetime):
+        return value.astimezone(timezone.utc).isoformat()
+    if hasattr(value, "to_datetime"):
+        converted = value.to_datetime()
+        if isinstance(converted, datetime):
+            return converted.astimezone(timezone.utc).isoformat()
+    return None
+
+
+def _find_booking(collection_name: str, booking_id: str) -> dict | None:
+    if collection_name not in BOOKING_COLLECTIONS or not booking_id:
+        return None
+    snapshot = db.collection(collection_name).document(booking_id).get()
+    return snapshot.to_dict() if snapshot.exists else None
+
+
+@router.get("/api/public-reviews")
+def list_public_reviews():
+    reviews = []
+    snapshots = db.collection("reviews").order_by(
+        "createdAt", direction=firestore.Query.DESCENDING
+    ).limit(12).stream()
+
+    for snapshot in snapshots:
+        review = snapshot.to_dict() or {}
+        comment = str(review.get("comment") or "").strip()
+        booking = _find_booking(
+            str(review.get("bookingCollection") or ""),
+            str(review.get("bookingId") or ""),
+        )
+        if not comment or booking is None or not _is_completed(booking):
+            continue
+
+        rating = review.get("rating")
+        if not isinstance(rating, int) or not 1 <= rating <= 5:
+            continue
+
+        created_at = _timestamp_to_iso(review.get("createdAt"))
+        reviews.append(
+            {
+                "id": snapshot.id,
+                "rating": rating,
+                "comment": comment,
+                "serviceType": str(booking.get("serviceType") or "Service Goying"),
+                "itemName": str(booking.get("itemName") or ""),
+                "createdAt": created_at,
+            }
+        )
+
+    return {"reviews": reviews}
+
+
 @router.post("/api/booking-reviews", status_code=status.HTTP_201_CREATED)
 def create_booking_review(
     request: BookingReviewRequest,
     firebase_user: dict = Depends(get_current_firebase_user),
+    _user_profile: dict = Depends(require_user_profile),
 ):
     transaction = db.transaction()
 

@@ -45,7 +45,9 @@
                 <label for="ville">Ville d'activité</label>
                 <input id="ville" name="ville" type="text">
                 <label for="commune">Commune</label>
-                <input id="commune" name="commune" type="text">
+                <select id="commune" name="commune" data-kinshasa-commune>
+                    <option value="">Sélectionnez votre commune</option>
+                </select>
                 <label for="annees_experience">Années d'expérience professionnelle</label>
                 <input id="annees_experience" name="annees_experience" type="number" min="0" step="1">
                 <label for="description">Présentation bio courte</label>
@@ -69,11 +71,30 @@
                 <label for="modele_vehicule">Modèle de véhicule</label>
                 <input id="modele_vehicule" name="modele_vehicule" type="text">
 
+                <fieldset class="provider-form-section">
+                    <legend>Photo de profil</legend>
+                    <div class="provider-profile-photo-editor" data-provider-photo-editor>
+                        <div class="provider-profile-photo-preview">
+                            <img data-provider-photo-preview alt="Photo de profil actuelle" hidden>
+                            <span data-provider-photo-placeholder aria-label="Avatar par défaut">👤</span>
+                        </div>
+                        <div class="provider-profile-photo-controls">
+                            <label for="photo-profil">Photo de profil <small>(facultative)</small></label>
+                            <input id="photo-profil" type="file" accept="image/*" data-provider-photo-input>
+                            <button type="button" data-provider-photo-remove hidden>Retirer la photo sélectionnée</button>
+                            <p data-provider-photo-error class="provider-photo-error" role="alert"></p>
+                            <small>Sans nouvelle sélection, la photo actuelle est conservée. JPEG, PNG ou WebP, 10 Mo maximum.</small>
+                        </div>
+                    </div>
+                </fieldset>
+
                 <div id="form-status" class="form-message" aria-live="polite"></div>
                 <button type="submit" class="status-button">Enregistrer les modifications</button>
             </form>
         </section>
     </main>
+    <script src="/static/provider-photo.js"></script>
+    <script src="/static/kinshasa-communes.js"></script>
     <script src="/static/prestataire-edit.js"></script>
 </body>
 </html>

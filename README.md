@@ -16,6 +16,23 @@ Configure aussi une clé secrète JWT avant de lancer le serveur :
 $env:JWT_SECRET_KEY="une-cle-longue-et-secrete"
 ```
 
+Pour la connexion Firebase de l'interface d'administration globale, configure
+les paramètres de l'application Web Firebase (la clé API Web n'est pas une clé
+de service) :
+
+```powershell
+$env:FIREBASE_WEB_API_KEY="..."
+$env:FIREBASE_WEB_AUTH_DOMAIN="votre-projet.firebaseapp.com"
+$env:FIREBASE_WEB_PROJECT_ID="votre-projet"
+$env:FIREBASE_WEB_APP_ID="..."
+```
+
+Active le fournisseur Email/Mot de passe dans Firebase Authentication. L'accès
+à `/admin/users` exige une session Firebase vérifiée et un profil Firestore
+actif avec `isAdmin: true`; le JWT des gestionnaires ne donne pas cet accès.
+La page utilise une session serveur HttpOnly de huit heures et les endpoints
+d'administration conservent leur contrôle Firebase côté API.
+
 ## Lancement
 
 ```bash
@@ -102,6 +119,91 @@ Collection `prestataires` :
 }
 ```
 
+### Profils des comptes Firebase
+
+Les utilisateurs déjà authentifiés par Firebase peuvent être associés à un profil
+Firestore `users/{uid}`. La dépendance backend `require_user_profile` crée ce
+profil lors de sa première utilisation si nécessaire, à partir de l'UID du token
+Firebase vérifié. Le rôle initial est `null` : aucun privilège n'est accordé
+automatiquement.
+
+Le profil contient `uid`, `email`, `displayName`, `photoURL`, `role`, `statut`,
+`actif`, `bloque`, `createdAt` et `updatedAt`; `telephone` est ajouté seulement
+s'il est fourni lors d'une mise à jour autorisée. `lastLoginAt` n'est pas écrit
+par les requêtes API. Aucun mot de passe n'est enregistré. Firebase
+Authentication reste la source canonique de l'identité et de l'email; les claims
+d'email et de nom sont seulement copiés à la création du profil et ne sont pas
+resynchronisés à chaque requête.
+
+Les profils bloqués ou désactivés sont refusés par `require_user_profile`, qui
+est appliqué aux routes Firebase du portail prestataire et à la création d'avis.
+`update_current_user_profile` n'autorise que les champs `displayName`,
+`telephone` et `photoURL`; les rôles et statuts administratifs sont exclus.
+La connexion JWT bcrypt des gestionnaires dans `gestionnaires` reste inchangée.
+
+Les anciens documents de la collection `users` dont l'ID diffère du UID
+Firebase restent lisibles par une recherche Firestore indexée sur leur champ
+`uid`. Les champs historiques `fullName` et `phone` sont exposés à l'API comme
+`displayName` et `telephone`. Une migration non destructive vers
+`users/{uid}` est disponible pour les profils identifiés sans supprimer leurs
+documents sources :
+
+```powershell
+py -m scripts.migrate_legacy_user_profiles utilisateur1@example.com utilisateur2@example.com
+```
+
+La migration vérifie la correspondance entre le compte Firebase et le champ
+`uid`, refuse d'écraser un document canonique existant, copie les champs métier
+connus, et marque le document source avec `migratedToUid`/`migratedAt`. Les
+documents sources sont conservés; les champs non autorisés ou sensibles
+empêchent la migration au lieu d'être copiés.
+
+### Administration globale des profils Firebase
+
+Les routes `/api/admin/users` sont réservées à un profil Firebase actif portant
+`isAdmin: true`. Les rôles métier (`maisons`, `prestataires`, `voitures`) ne
+donnent jamais cette permission. Le client ne peut pas modifier `isAdmin` via
+la mise à jour de son propre profil.
+
+Pour le premier administrateur, exécuter une seule fois depuis un environnement
+opérateur disposant des identifiants Firebase Admin :
+
+```powershell
+py -m scripts.bootstrap_admin <UID_FIREBASE> --confirm I_CONFIRM_FIRST_ADMIN
+```
+
+La commande valide que le compte Firebase existe et est actif, refuse le
+bootstrap si un administrateur ou le verrou de bootstrap existe déjà, puis
+crée/actualise le profil, le compteur transactionnel et l'entrée
+`adminActions`. Elle ne peut pas être appelée par une route HTTP. La collection
+`systemConfig` contient le document `userAdministration` avec le nombre
+d'administrateurs globaux actifs; ne pas modifier ce compteur manuellement.
+
+Routes disponibles :
+
+- `GET /api/admin/users` : liste paginée (1–100 éléments) avec `cursor`, filtres
+  `role`, `statut`, `actif`, `bloque` et `isAdmin`; la réponse contient
+  `users`, `nextCursor` et `hasMore`.
+- `GET /api/admin/users/stats` : nombre total des profils Goying, calculé par
+  agrégation Firestore sans charger les documents et sans compter les sources
+  déjà migrées.
+- Recherche exacte sans scan : `?search=<UID>&searchBy=uid` (défaut) ou
+  `?search=<email>&searchBy=email`.
+- `GET /api/admin/users/{uid}` : détail du profil et état du compte Firebase.
+- `PATCH /api/admin/users/{uid}` : uniquement `displayName`, `telephone`,
+  `role` (rôle métier non administrateur, ou `null`) et `isAdmin` (booléen).
+- `POST /api/admin/users/{uid}/block|unblock|activate|deactivate` : contrôle
+  des champs `bloque`, `actif` et `statut`.
+
+Les modifications administratives et leurs entrées `adminActions` sont
+écrites dans la même transaction Firestore. Le compteur empêche la désactivation
+du dernier administrateur actif. Un blocage/désactivation empêche l'accès aux
+routes qui passent par `require_user_profile`; cette phase ne désactive pas
+Firebase Authentication et ne révoque pas les refresh tokens. La suppression
+de comptes, la révocation effective des sessions et les éventuelles références
+historiques ne sont pas incluses dans cette API. Les filtres combinés peuvent
+nécessiter la création d'index Firestore proposés par Firebase.
+
 ## Routes principales
 
 - `GET /`
@@ -116,10 +218,8 @@ Collection `prestataires` :
 - `GET /api/public/voitures` retourne uniquement les voitures disponibles, sans données privées
 - `GET /api/public/voitures/ventes` retourne uniquement les annonces de vente disponibles, sans le WhatsApp du vendeur
 - `POST /api/booking-reviews` accepte le jeton Firebase du client et enregistre un seul avis pour une réservation terminée
-- `DELETE /api/bookings/{booking_id}` accepte le jeton Firebase du client, vérifie que la réservation lui appartient, puis l'annule ; une réservation immobilière rétablit la disponibilité de la maison dans la même transaction
 - `GET /api/provider-missions`, `POST /api/provider-missions/{booking_id}/complete` et `POST /api/provider-availability` utilisent le jeton Firebase d'un prestataire approuvé
-- `POST /api/portfolio-uploads` utilise le jeton Firebase d'un prestataire approuvé et prépare les envois S3 JPEG, PNG ou WebP du portfolio et de la photo de profil
-- `POST /api/professional-applications` accepte le jeton Firebase du candidat, crée un dossier prestataire `En attente` et ne valide jamais le paiement ni le profil automatiquement
+- `POST /api/portfolio-uploads` prépare un téléversement S3 signé pour le portfolio d'un prestataire approuvé
 - `POST /login`
 - `POST /api/login`
 - `GET /dashboard/prestataires` avec un token de rôle `prestataires`
@@ -135,6 +235,22 @@ Collection `prestataires` :
 - `PATCH /prestataires/{prestataire_id}/approuver` avec un token de rôle `prestataires`
 - `PATCH /prestataires/{prestataire_id}/refuser` avec un token de rôle `prestataires`
 
+## Réservations : suppression réelle côté backend
+
+- Le frontend ne doit retirer une réservation de l’interface **qu’après** une réponse backend de suppression réussie.
+- L’API client expose `DELETE /api/bookings/{booking_id}` (également `DELETE` ou `POST /api/bookings/{booking_id}/cancel`) avec un jeton Firebase. Elle vérifie l’identité du client, supprime uniquement sa réservation et remet la maison disponible si cette réservation approuvée en était bien à l’origine.
+- La suppression de réservation automobile côté gestion est exposée par :
+  - `DELETE /api/voitures/reservations/{reservation_id}` (token de rôle `voitures` requis).
+- La route client est implémentée dans `booking_cancellation.py` et enregistrée dans `main.py`. Pour qu’elle soit disponible en production, pousser ces changements et redéployer le service Render. Avant ce déploiement, l’API Render ne connaîtra pas la route et la suppression ne fonctionnera pas en production.
+
+## Portfolio des prestataires
+
+`POST /api/portfolio-uploads` exige un jeton Firebase valide et un compte prestataire approuvé. Le JSON peut décrire un fichier (`fileName`, `contentType`, `fileSize`) ou une liste `files` contenant ces champs par fichier. Seuls JPEG, PNG et WebP sont acceptés; chaque fichier est limité à 5 Mo et le portfolio à six objets S3.
+
+La réponse fournit `uploadUrl` (URL PUT signée valable cinq minutes), `publicUrl`, `key`, la méthode et les en-têtes requis; pour une demande multiple, ces informations sont dans `uploads`. Le client doit téléverser les octets vers `uploadUrl` en utilisant la méthode et les en-têtes indiqués, puis enregistrer `publicUrl` dans le portfolio après réussite de la requête S3. Les objets utilisent le préfixe `goying/prestataires/{providerId}/portfolio/`.
+
+Le rôle IAM AWS utilisé par Render doit autoriser `s3:ListBucket` sur le bucket (pour vérifier la limite de six fichiers) et `s3:PutObject` sur ce préfixe. Le bucket et sa configuration CORS S3 doivent également permettre le PUT depuis l’origine de l’application.
+
 ## Générer un hash bcrypt
 
 ```powershell
@@ -142,3 +258,13 @@ python -c "import bcrypt; print(bcrypt.hashpw(b'Goyingmaison1', bcrypt.gensalt()
 python -c "import bcrypt; print(bcrypt.hashpw(b'Goyingprestataire2', bcrypt.gensalt()).decode())"
 python -c "import bcrypt; print(bcrypt.hashpw(b'Goyingvoiture3', bcrypt.gensalt()).decode())"
 ```
+## Candidatures prestataires (validation manuelle du paiement)
+
+L'endpoint `POST /api/professional-applications` accepte un token Firebase
+client (`Authorization: Bearer ...`) et crée une candidature prestataire
+avec statut `En attente`. Le paiement n'est pas validé automatiquement:
+`paymentStatus` est toujours initialisé à `À vérifier manuellement`.
+
+Ce flux crée aussi `professionalAccounts/{uid}` pour lier la candidature au
+compte Firebase du candidat. Une seconde candidature pour le même `uid` est
+refusée avec `409`.

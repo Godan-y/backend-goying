@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderProvider(provider) {
         const name = clean(provider.name || provider.nom || provider.nom_complet) || 'Prestataire sans nom';
-        const photo = clean(provider.avatarUrl || provider.photo_url || provider.photo);
+        const photo = clean(provider.photo_profil || provider.avatarUrl || provider.photo_url || provider.photo);
         const type = providerType(provider) || 'Type non renseigné';
         const phone = clean(provider.phone || provider.telephone);
         const email = clean(provider.email);
@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const provider = providers.find((item) => String(item.id) === id);
         if (!provider) return;
         const name = clean(provider.name || provider.nom || provider.nom_complet) || 'Prestataire sans nom';
-        const photo = clean(provider.avatarUrl || provider.photo_url || provider.photo);
+        const photo = clean(provider.photo_profil || provider.avatarUrl || provider.photo_url || provider.photo);
         const detailValues = [
             ['Type', providerType(provider)],
             ['Statut', 'Disponible'],
@@ -291,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(providerType(provider) || 'Type non renseigné')}</p><span class="provider-available-status"><i aria-hidden="true"></i> Disponible</span></div>
         </div>
         <dl class="provider-available-detail-list">${detailValues.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>`;
-        attachImageFallbacks();
+        attachImageFallbacks(detailsBody);
         detailsDialog.showModal();
     }
 
@@ -357,8 +357,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function attachImageFallbacks() {
-        list.querySelectorAll('.provider-available-avatar img').forEach((image) => {
+    function attachImageFallbacks(root = list) {
+        root.querySelectorAll('.provider-available-avatar img').forEach((image) => {
             if (image.dataset.fallbackBound) return;
             image.dataset.fallbackBound = 'true';
             image.addEventListener('error', () => {

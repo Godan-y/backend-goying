@@ -22,7 +22,11 @@
             <label>Transmission<input name="transmission" required></label>
             <label>Places<input name="seats" type="number" min="1" required></label>
             <label>Ville où le véhicule est visible<input name="city" autocomplete="address-level2"></label>
-            <label>Commune / Quartier<input name="commune" autocomplete="address-level3"></label>
+            <label>Commune
+                <select name="commune" autocomplete="address-level3" data-kinshasa-commune>
+                    <option value="">Sélectionnez votre commune</option>
+                </select>
+            </label>
             <label>Prix par jour<input name="price_per_day" type="number" min="0" required></label>
             <label>Devise<input name="currency" required></label>
             <label>Équipements, séparés par des virgules<textarea name="features" rows="3"></textarea></label>
@@ -33,6 +37,7 @@
         </form>
     </section>
 </main>
+<script src="/static/kinshasa-communes.js"></script>
 <script src="/static/modifier-voiture.js"></script>
 </body>
 </html>

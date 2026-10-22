@@ -113,8 +113,10 @@
                             <input type="text" id="city" name="city" placeholder="Ex. Kinshasa" autocomplete="address-level2" required aria-describedby="city-error">
                             <span class="vehicle-field-error" id="city-error" data-field-error="city" hidden></span>
                         </label>
-                        <label for="commune">Commune / Quartier <span class="vehicle-required" aria-hidden="true">*</span>
-                            <input type="text" id="commune" name="commune" placeholder="Ex. Gombe" autocomplete="address-level3" required aria-describedby="commune-error">
+                        <label for="commune">Commune <span class="vehicle-required" aria-hidden="true">*</span>
+                            <select id="commune" name="commune" autocomplete="address-level3" required aria-describedby="commune-error" data-kinshasa-commune>
+                                <option value="">Sélectionnez votre commune</option>
+                            </select>
                             <span class="vehicle-field-error" id="commune-error" data-field-error="commune" hidden></span>
                         </label>
                     </div>
@@ -230,6 +232,7 @@
         </div>
     </form>
 </main>
+<script src="/static/kinshasa-communes.js"></script>
 <script src="/static/ajouter-voiture.js"></script>
 </body>
 </html>
