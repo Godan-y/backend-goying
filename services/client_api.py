@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from firebase_admin import firestore
 from pydantic import BaseModel, ConfigDict, Field
 
-from dependencies import get_current_firebase_user
+from dependencies import get_current_firebase_user, require_admin
 from firebase import db
 
 router = APIRouter(tags=["parcours-client"])
@@ -343,9 +343,11 @@ def create_partnership(data: dict, request: Request):
 
 
 @router.get("/api/partnership-requests")
-def list_partnership_requests(limit: int = 50, cursor: str | None = None, user: dict = Depends(get_current_firebase_user)):
-    if user.get("admin") is not True:
-        raise HTTPException(status_code=403, detail="Accès réservé aux administrateurs")
+def list_partnership_requests(
+    limit: int = 50,
+    cursor: str | None = None,
+    user: dict = Depends(require_admin),
+):
     try:
         if not 1 <= limit <= 100:
             raise HTTPException(status_code=400, detail="La limite doit être comprise entre 1 et 100")
@@ -389,9 +391,11 @@ def list_partnership_requests(limit: int = 50, cursor: str | None = None, user: 
 
 
 @router.patch("/api/partnership-requests/{request_id}")
-def update_partnership_request(request_id: str, data: dict, user: dict = Depends(get_current_firebase_user)):
-    if user.get("admin") is not True:
-        raise HTTPException(status_code=403, detail="Accès réservé aux administrateurs")
+def update_partnership_request(
+    request_id: str,
+    data: dict,
+    user: dict = Depends(require_admin),
+):
     if set(data) != {"status"} or data.get("status") not in {"nouveau", "en_cours", "acceptee", "refusee"}:
         raise HTTPException(status_code=400, detail="Statut de traitement invalide")
     reference = db.collection("partnershipRequests").document(_request_id(request_id))
