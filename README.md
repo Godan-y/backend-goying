@@ -116,7 +116,10 @@ Collection `prestataires` :
 - `GET /api/public/voitures` retourne uniquement les voitures disponibles, sans données privées
 - `GET /api/public/voitures/ventes` retourne uniquement les annonces de vente disponibles, sans le WhatsApp du vendeur
 - `POST /api/booking-reviews` accepte le jeton Firebase du client et enregistre un seul avis pour une réservation terminée
+- `DELETE /api/bookings/{booking_id}` accepte le jeton Firebase du client, vérifie que la réservation lui appartient, puis l'annule ; une réservation immobilière rétablit la disponibilité de la maison dans la même transaction
 - `GET /api/provider-missions`, `POST /api/provider-missions/{booking_id}/complete` et `POST /api/provider-availability` utilisent le jeton Firebase d'un prestataire approuvé
+- `POST /api/portfolio-uploads` utilise le jeton Firebase d'un prestataire approuvé et prépare les envois S3 JPEG, PNG ou WebP du portfolio et de la photo de profil
+- `POST /api/professional-applications` accepte le jeton Firebase du candidat, crée un dossier prestataire `En attente` et ne valide jamais le paiement ni le profil automatiquement
 - `POST /login`
 - `POST /api/login`
 - `GET /dashboard/prestataires` avec un token de rôle `prestataires`
