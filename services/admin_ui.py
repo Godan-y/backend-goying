@@ -165,3 +165,24 @@ def delete_admin_session(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return {"ok": True}
+
+
+@router.get(
+    "/admin/partnerships",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+    dependencies=[Depends(require_admin_session)],
+)
+def admin_partnerships_page(request: Request):
+    config = _firebase_web_config()
+    _ensure_web_config(config)
+    response = templates.TemplateResponse(
+        request=request,
+        name="admin_partnerships.html",
+        context={"firebase_web_config": config},
+    )
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response

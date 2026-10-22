@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>GOYING — Demandes de partenariat</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell admin-users-shell" data-admin-partnerships>
+    <header class="house-dashboard-header">
+        <a class="house-dashboard-brand" href="/" aria-label="GOYING, accueil">
+            <span class="house-dashboard-brand-mark" aria-hidden="true">G</span>
+            <span>GOYING<small>ADMINISTRATION GLOBALE</small></span>
+        </a>
+        <nav class="house-dashboard-nav" aria-label="Navigation administration">
+            <a href="/">Accueil</a>
+            <a href="/admin/users">Utilisateurs</a>
+            <a href="/admin/partnerships" class="house-dashboard-active" aria-current="page">Partenariats</a>
+            <button type="button" data-admin-logout>Déconnexion</button>
+        </nav>
+    </header>
+
+    <section class="house-dashboard-hero admin-users-hero">
+        <div>
+            <p class="house-dashboard-kicker">ESPACE SÉCURISÉ · ADMINISTRATION</p>
+            <h1>Demandes de partenariat</h1>
+            <p>Consultez les propositions reçues et suivez leur traitement.</p>
+        </div>
+    </section>
+
+    <p class="admin-users-alert" id="partnership-message"
+       role="status" aria-live="polite" hidden></p>
+
+    <section class="admin-users-summary" aria-label="Résumé">
+        <article class="admin-users-stat-card">
+            <span class="admin-users-stat-icon" aria-hidden="true">P</span>
+            <div>
+                <p>DEMANDES CHARGÉES</p>
+                <strong id="partnership-count">—</strong>
+                <small>Résultats de la page actuelle</small>
+            </div>
+        </article>
+    </section>
+
+    <section class="admin-users-panel" aria-label="Recherche et filtres">
+        <form id="partnership-filters" class="admin-users-filters">
+            <label>
+                <span>Recherche</span>
+                <input id="partnership-search" type="search" maxlength="200"
+                       placeholder="Organisation, contact, email, téléphone">
+            </label>
+            <label>
+                <span>Statut</span>
+                <select id="partnership-status-filter">
+                    <option value="">Tous les statuts</option>
+                    <option value="nouveau">Nouveau</option>
+                    <option value="en_cours">En cours</option>
+                    <option value="acceptee">Acceptée</option>
+                    <option value="refusee">Refusée</option>
+                </select>
+            </label>
+            <button class="admin-users-filter-button" type="submit">Rechercher</button>
+            <button class="admin-users-reset-button" type="button" id="partnership-reset">Réinitialiser</button>
+        </form>
+    </section>
+
+    <section class="admin-users-panel admin-users-list-panel"
+             aria-labelledby="partnership-list-title">
+        <div class="admin-users-list-heading">
+            <div>
+                <p class="house-dashboard-kicker">PROPOSITIONS REÇUES</p>
+                <h2 id="partnership-list-title">Liste des demandes</h2>
+            </div>
+            <button class="admin-users-reset-button" id="partnership-refresh" type="button">
+                Actualiser
+            </button>
+        </div>
+
+        <p id="partnership-loading" role="status" hidden>Chargement des demandes…</p>
+        <p id="partnership-empty" hidden>Aucune demande correspondant aux critères.</p>
+
+        <div class="admin-users-table-wrap" id="partnership-table-wrap" hidden>
+            <table class="admin-users-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Organisation</th>
+                        <th scope="col">Contact</th>
+                        <th scope="col">Collaboration</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Statut</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="partnership-rows"></tbody>
+            </table>
+        </div>
+
+        <div class="admin-users-pagination">
+            <button class="admin-users-reset-button" id="partnership-previous"
+                    type="button" disabled>Page précédente</button>
+            <span id="partnership-page-status" aria-live="polite">Page 1</span>
+            <button class="admin-users-reset-button" id="partnership-next"
+                    type="button" disabled>Page suivante</button>
+        </div>
+    </section>
+
+    <dialog id="partnership-detail-dialog" aria-labelledby="partnership-detail-title">
+        <div class="admin-users-panel">
+            <h2 id="partnership-detail-title">Détails de la demande</h2>
+            <dl id="partnership-detail-content"></dl>
+            <button class="admin-users-reset-button" id="partnership-detail-close"
+                    type="button">Fermer</button>
+        </div>
+    </dialog>
+</main>
+
+<script id="firebase-web-config" type="application/json">{{ firebase_web_config | tojson }}</script>
+<script type="module" src="/static/admin-partnerships.js"></script>
+</body>
+</html>
