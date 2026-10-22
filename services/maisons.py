@@ -425,6 +425,67 @@ def liberer_reservation_maison(
     }
 
 
+@router.patch("/maisons/api/reservations/{reservation_id}/confirmer-visite")
+def confirmer_visite_maison(
+    reservation_id: str,
+    gestionnaire: dict = Depends(require_role("maisons")),
+):
+    reservation_reference = db.collection("propertyBookings").document(reservation_id)
+    transaction = db.transaction()
+
+    @firestore.transactional
+    def complete_visit(transaction):
+        reservation_snapshot = reservation_reference.get(transaction=transaction)
+        if not reservation_snapshot.exists:
+            raise HTTPException(status_code=404, detail="Réservation immobilière introuvable")
+
+        reservation = reservation_snapshot.to_dict() or {}
+        if str(reservation.get("serviceType", "")).strip().lower() != "immobilier":
+            raise HTTPException(status_code=404, detail="Réservation immobilière introuvable")
+        if not _reservation_est_approuvee(reservation):
+            raise HTTPException(
+                status_code=409,
+                detail="Seule une visite approuvée peut être confirmée comme effectuée",
+            )
+
+        property_id = _reservation_property_id(reservation)
+        if not property_id:
+            raise HTTPException(status_code=400, detail="La réservation ne contient aucune maison liée")
+
+        property_reference = db.collection("maisons").document(property_id)
+        property_snapshot = property_reference.get(transaction=transaction)
+        if not property_snapshot.exists:
+            raise HTTPException(status_code=404, detail="Bien lié à la réservation introuvable")
+        property_data = property_snapshot.to_dict() or {}
+        if property_data.get("reservedByBookingId") != reservation_id:
+            raise HTTPException(
+                status_code=409,
+                detail="Cette réservation n'est plus à l'origine de l'indisponibilité du bien",
+            )
+
+        now = datetime.now(timezone.utc)
+        transaction.update(reservation_reference, {
+            "status": "Terminé",
+            "approved": False,
+            "completedAt": now,
+            "completedBy": gestionnaire["nom"],
+        })
+        transaction.update(property_reference, {
+            "statut": "disponible",
+            "disponibilite": "disponible",
+            "reservedByBookingId": firestore.DELETE_FIELD,
+        })
+        return property_id
+
+    property_id = complete_visit(transaction)
+    return {
+        "message": "Visite confirmée comme effectuée et bien remis disponible",
+        "reservation_id": reservation_id,
+        "property_id": property_id,
+        "status": "Terminé",
+        "disponibilite": "disponible",
+    }
+
 def _reservation_property_id(reservation: dict) -> str:
     return str(reservation.get("propertyId") or reservation.get("bien_id") or "").strip()
 
@@ -438,7 +499,7 @@ def _normaliser_statut(value: object) -> str:
 
 def _reservation_est_approuvee(reservation: dict) -> bool:
     statut = _normaliser_statut(reservation.get("status") or reservation.get("statut"))
-    if statut in {"annule", "annulee", "refuse", "refusee", "cancelled", "canceled"}:
+    if statut in {"annule", "annulee", "refuse", "refusee", "cancelled", "canceled", "termine", "completed"}:
         return False
     return reservation.get("approved") is True or statut in {
         "confirme",

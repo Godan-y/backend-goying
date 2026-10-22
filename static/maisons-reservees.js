@@ -136,13 +136,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = reservationTitle(reservation, property);
         pendingAction = { id: reservation.id, action };
         const releasing = action === 'release';
-        confirmTitle.textContent = releasing
-            ? 'Annuler la réservation et libérer le bien ?'
-            : 'Approuver la réservation ?';
-        confirmMessage.textContent = releasing
-            ? `La réservation de « ${title} » sera marquée comme annulée et le bien redeviendra disponible.`
-            : `La réservation de « ${title} » sera confirmée et le bien deviendra indisponible.`;
-        confirmButton.textContent = releasing ? 'Confirmer l’annulation et la libération' : 'Approuver et rendre indisponible';
+        const completing = action === 'complete';
+        confirmTitle.textContent = completing
+            ? 'Confirmer la visite effectuée ?'
+            : releasing ? 'Annuler la réservation et libérer le bien ?' : 'Approuver la réservation ?';
+        confirmMessage.textContent = completing
+            ? `La visite de « ${title} » sera marquée comme effectuée et le bien redeviendra disponible.`
+            : releasing
+                ? `La réservation de « ${title} » sera marquée comme annulée et le bien redeviendra disponible.`
+                : `La réservation de « ${title} » sera confirmée et le bien deviendra indisponible.`;
+        confirmButton.textContent = completing
+            ? 'Confirmer la visite effectuée'
+            : releasing ? 'Confirmer l’annulation et la libération' : 'Approuver et rendre indisponible';
         confirmDialog.showModal();
     }
 
@@ -159,7 +164,11 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelButton.disabled = true;
         confirmButton.textContent = 'Enregistrement…';
         try {
-            const endpointAction = action.action === 'approve' ? 'approuver' : 'liberer';
+            const endpointAction = {
+                approve: 'approuver',
+                release: 'liberer',
+                complete: 'confirmer-visite',
+            }[action.action];
             const response = await fetch(
                 `/maisons/api/reservations/${encodeURIComponent(action.id)}/${endpointAction}`,
                 {
@@ -190,9 +199,13 @@ document.addEventListener('DOMContentLoaded', () => {
             acting = false;
             confirmButton.disabled = false;
             cancelButton.disabled = false;
-            if (confirmDialog.open) confirmButton.textContent = pendingAction?.action === 'release'
-                ? 'Confirmer l’annulation et la libération'
-                : 'Approuver et rendre indisponible';
+            if (confirmDialog.open) {
+                confirmButton.textContent = pendingAction?.action === 'complete'
+                    ? 'Confirmer la visite effectuée'
+                    : pendingAction?.action === 'release'
+                        ? 'Confirmer l’annulation et la libération'
+                        : 'Approuver et rendre indisponible';
+            }
         }
     }
 
@@ -240,7 +253,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const status = firstValue(reservation.status, reservation.statut);
         const statusNormalized = normalize(status);
         const isCancelled = ['annule', 'annulee', 'cancelled', 'canceled', 'refuse', 'refusee'].includes(statusNormalized);
-        const isApproved = !isCancelled && (
+        const isCompleted = ['termine', 'completed'].includes(statusNormalized);
+        const isApproved = !isCancelled && !isCompleted && (
             reservation.approved === true
             || ['confirme', 'approuve', 'approved', 'confirmed'].includes(statusNormalized)
         );
@@ -282,10 +296,11 @@ document.addEventListener('DOMContentLoaded', () => {
             && hasPropertyLink
             && availability === 'disponible';
         const canRelease = isApproved && property.reservedByBookingId === reservationId;
+        const canComplete = canRelease;
         const actionMarkup = canApprove
             ? `<button type="button" class="property-reservation-action is-primary" data-reservation-action="approve" data-id="${escapeHtml(reservationId)}">Approuver et rendre indisponible</button>`
             : canRelease
-                ? `<button type="button" class="property-reservation-action is-secondary" data-reservation-action="release" data-id="${escapeHtml(reservationId)}">Annuler et rendre disponible</button>`
+                ? `<button type="button" class="property-reservation-action is-secondary" data-reservation-action="release" data-id="${escapeHtml(reservationId)}">Annuler et rendre disponible</button>${canComplete ? `<button type="button" class="property-reservation-action is-primary" data-reservation-action="complete" data-id="${escapeHtml(reservationId)}">Confirmer la visite effectuée</button>` : ''}`
                 : '';
         let actionExplanation = '';
         if (isCancelled) {
@@ -294,6 +309,8 @@ document.addEventListener('DOMContentLoaded', () => {
             actionExplanation = 'Aucune maison liée à cette réservation n’a pu être identifiée.';
         } else if (isApproved && !canRelease) {
             actionExplanation = 'La réservation est approuvée, mais la maison n’est pas enregistrée comme indisponible à cause de cette réservation. Vérifiez sa disponibilité avant toute réactivation.';
+        } else if (isCompleted) {
+            actionExplanation = 'Cette visite est confirmée comme effectuée et le bien est disponible.';
         } else if (isPending && availability !== 'disponible') {
             actionExplanation = 'La disponibilité de la maison est indisponible ou ne peut pas être vérifiée. Cette réservation ne peut pas être approuvée ici.';
         } else if (!isApproved && !isPending) {
@@ -322,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${transactionType ? `<span>${escapeHtml(transactionType)}</span>` : ''}
                     </div>
                     <div class="property-booking-status-row">
-                        <span class="property-booking-status ${isCancelled ? 'is-cancelled' : isApproved ? 'is-confirmed' : isPending ? 'is-pending' : 'is-unknown'}">${isCancelled ? 'Annulée' : isApproved ? 'Approuvée' : isPending ? 'En attente' : 'Statut à vérifier'}</span>
+                        <span class="property-booking-status ${isCancelled ? 'is-cancelled' : isCompleted ? 'is-confirmed' : isApproved ? 'is-confirmed' : isPending ? 'is-pending' : 'is-unknown'}">${isCancelled ? 'Annulée' : isCompleted ? 'Terminée' : isApproved ? 'Approuvée' : isPending ? 'En attente' : 'Statut à vérifier'}</span>
                         ${isApproved && statusNormalized === 'confirme' ? '<span class="property-booking-status is-confirmed">Confirmée</span>' : ''}
                         ${availability ? `<span class="property-booking-status ${availability === 'disponible' ? 'is-available' : 'is-unavailable'}">${availability === 'disponible' ? 'Disponible' : 'Indisponible'}</span>` : ''}
                     </div>

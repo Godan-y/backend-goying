@@ -14,6 +14,8 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 BOOKING_COLLECTIONS = ("bookings", "carBookings", "propertyBookings")
 PROVIDER_COLLECTIONS = {"chauffeurs", "providers"}
+PROPERTY_BOOKING_COLLECTION = "propertyBookings"
+CAR_BOOKING_COLLECTION = "carBookings"
 
 
 class BookingReviewRequest(BaseModel):
@@ -35,6 +37,15 @@ def _is_completed(booking: dict) -> bool:
         "termine",
         "completed",
     }
+
+
+def _has_server_completion_marker(collection_name: str, booking: dict) -> bool:
+    marker_field = {
+        "bookings": "adminCompletedAt",
+        "carBookings": "completedAt",
+        "propertyBookings": "completedAt",
+    }.get(collection_name)
+    return bool(marker_field and _is_completed(booking) and _timestamp_to_iso(booking.get(marker_field)))
 
 
 def _timestamp_to_iso(value: object) -> str | None:
@@ -112,7 +123,7 @@ def create_booking_review(
             raise HTTPException(status_code=404, detail="Réservation introuvable")
 
         booking_collection, booking_reference, booking = booking_record
-        if not _is_completed(booking):
+        if not _has_server_completion_marker(booking_collection, booking):
             raise HTTPException(
                 status_code=403,
                 detail="Un avis peut être laissé uniquement après la fin de la prestation",
@@ -121,7 +132,13 @@ def create_booking_review(
         booking_client_uid = str(booking.get("clientUid") or booking.get("clientId") or "")
         booking_client_email = str(booking.get("clientEmail") or "").strip().lower()
         firebase_email = str(firebase_user.get("email") or "").strip().lower()
-        if booking_client_uid != firebase_user["uid"] and booking_client_email != firebase_email:
+        owns_by_uid = bool(firebase_user.get("uid")) and booking_client_uid == firebase_user.get("uid")
+        owns_by_verified_email = (
+            firebase_user.get("email_verified") is True
+            and bool(firebase_email)
+            and booking_client_email == firebase_email
+        )
+        if not owns_by_uid and not owns_by_verified_email:
             raise HTTPException(
                 status_code=403,
                 detail="Vous ne pouvez évaluer que vos propres réservations",
@@ -129,11 +146,46 @@ def create_booking_review(
 
         provider_id = str(booking.get("providerId") or "").strip()
         provider_collection = str(booking.get("providerCollection") or "").strip()
-        if not provider_id or provider_collection not in PROVIDER_COLLECTIONS:
+        has_provider = bool(provider_id and provider_collection in PROVIDER_COLLECTIONS)
+        service_type = _normalized(booking.get("serviceType"))
+        is_property_rental = (
+            booking_collection == PROPERTY_BOOKING_COLLECTION
+            and service_type == "immobilier"
+        )
+        is_car_rental = (
+            booking_collection == CAR_BOOKING_COLLECTION
+            and service_type == "automobile"
+        )
+        is_provider_service = (
+            booking_collection == "bookings"
+            and has_provider
+            and service_type in {"chauffeur", "service a la personne"}
+        )
+        if not (is_provider_service or is_property_rental or is_car_rental):
             raise HTTPException(
                 status_code=403,
                 detail="Cette réservation ne peut pas recevoir d'avis",
             )
+
+        aggregate_reference = None
+        aggregate_data = None
+        aggregate_fields = ("rating", "reviewsCount")
+        aggregate_id = None
+        if is_property_rental:
+            aggregate_id = str(booking.get("propertyId") or booking.get("bien_id") or "").strip()
+            aggregate_collection = "maisons"
+            aggregate_fields = ("note", "avis")
+        elif is_car_rental:
+            aggregate_id = str(booking.get("vehicleId") or booking.get("bien_id") or "").strip()
+            aggregate_collection = "vehicles"
+        if is_property_rental or is_car_rental:
+            if not aggregate_id:
+                raise HTTPException(status_code=403, detail="Cette réservation ne contient aucun bien associé")
+            aggregate_reference = db.collection(aggregate_collection).document(aggregate_id)
+            aggregate_snapshot = aggregate_reference.get(transaction=transaction)
+            aggregate_data = aggregate_snapshot.to_dict() if aggregate_snapshot.exists else None
+            if not aggregate_data:
+                raise HTTPException(status_code=404, detail="Le bien associé à la réservation est introuvable")
 
         review_reference = db.collection("reviews").document(
             f"{booking_collection}_{request.booking_id}"
@@ -144,19 +196,31 @@ def create_booking_review(
                 detail="Un avis a déjà été enregistré pour cette réservation",
             )
 
-        provider_reference = db.collection(provider_collection).document(provider_id)
-        provider_snapshot = provider_reference.get(transaction=transaction)
-        if not provider_snapshot.exists:
-            raise HTTPException(status_code=404, detail="Prestataire introuvable")
+        provider_reference = None
+        average_rating = None
+        reviews_count = None
+        if has_provider:
+            provider_reference = db.collection(provider_collection).document(provider_id)
+            provider_snapshot = provider_reference.get(transaction=transaction)
+            if not provider_snapshot.exists:
+                raise HTTPException(status_code=404, detail="Prestataire introuvable")
 
-        provider = provider_snapshot.to_dict() or {}
-        current_rating = float(provider.get("rating") or provider.get("note") or 0)
-        current_reviews_count = int(provider.get("reviewsCount") or provider.get("avis") or 0)
-        reviews_count = current_reviews_count + 1
-        average_rating = round(
-            (current_rating * current_reviews_count + request.rating) / reviews_count,
-            1,
-        )
+            provider = provider_snapshot.to_dict() or {}
+            current_rating = float(provider.get("rating") or provider.get("note") or 0)
+            current_reviews_count = int(provider.get("reviewsCount") or provider.get("avis") or 0)
+            reviews_count = current_reviews_count + 1
+            average_rating = round(
+                (current_rating * current_reviews_count + request.rating) / reviews_count,
+                1,
+            )
+        elif aggregate_reference is not None and aggregate_data is not None:
+            current_rating = float(aggregate_data.get(aggregate_fields[0]) or 0)
+            current_reviews_count = int(aggregate_data.get(aggregate_fields[1]) or 0)
+            reviews_count = current_reviews_count + 1
+            average_rating = round(
+                (current_rating * current_reviews_count + request.rating) / reviews_count,
+                1,
+            )
         now = firestore.SERVER_TIMESTAMP
 
         transaction.create(
@@ -165,19 +229,26 @@ def create_booking_review(
                 "bookingId": request.booking_id,
                 "bookingCollection": booking_collection,
                 "clientUid": firebase_user["uid"],
-                "providerId": provider_id,
-                "providerCollection": provider_collection,
+                **({"providerId": provider_id, "providerCollection": provider_collection} if has_provider else {}),
                 "rating": request.rating,
                 "comment": request.comment.strip(),
                 "createdAt": now,
             },
         )
-        transaction.update(
-            provider_reference,
-            {"rating": average_rating, "reviewsCount": reviews_count},
-        )
+        if provider_reference is not None:
+            transaction.update(
+                provider_reference,
+                {"rating": average_rating, "reviewsCount": reviews_count},
+            )
+        elif aggregate_reference is not None:
+            transaction.update(
+                aggregate_reference,
+                {aggregate_fields[0]: average_rating, aggregate_fields[1]: reviews_count},
+            )
         transaction.update(booking_reference, {"reviewedAt": now})
-        return {"rating": average_rating, "reviewsCount": reviews_count}
+        if has_provider or aggregate_reference is not None:
+            return {"rating": average_rating, "reviewsCount": reviews_count}
+        return {"rating": request.rating, "reviewsCount": 1}
 
     try:
         return save_review(transaction)
