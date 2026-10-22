@@ -13,6 +13,7 @@ from dependencies import (
     get_current_gestionnaire,
     require_role,
     require_user_profile,
+    require_verified_firebase_user,
 )
 from services.users import (
     InvalidUserProfileUpdate,
@@ -39,6 +40,7 @@ class UserProfileTests(unittest.TestCase):
             "email": "person@example.test",
             "name": "Goying User",
             "picture": "https://example.test/photo.jpg",
+            "email_verified": True,
         }
         self.profile = {
             "uid": self.firebase_user["uid"],
@@ -282,6 +284,17 @@ class UserProfileTests(unittest.TestCase):
         self.assertEqual(profile, self.profile)
         reference.create.assert_called_once()
         self.assertEqual(reference.get.call_count, 2)
+
+    def test_unverified_firebase_claim_is_forbidden(self):
+        with self.assertRaises(HTTPException) as context:
+            require_verified_firebase_user({**self.firebase_user, "email_verified": False})
+        self.assertEqual(context.exception.status_code, 403)
+
+    def test_verified_firebase_claim_is_accepted(self):
+        self.assertEqual(
+            require_verified_firebase_user(self.firebase_user),
+            self.firebase_user,
+        )
 
     @patch("dependencies.firebase_auth.verify_id_token")
     def test_valid_firebase_token_is_verified_and_uid_is_preserved(self, verify):

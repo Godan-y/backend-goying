@@ -124,6 +124,7 @@ class ProviderApplicationTests(unittest.TestCase):
         self.firebase_user = {
             "uid": "firebase-provider-123",
             "email": "provider@example.test",
+            "email_verified": True,
         }
         self.request = {
             "fullName": "Prestataire Test",
@@ -170,6 +171,24 @@ class ProviderApplicationTests(unittest.TestCase):
         self.assertEqual(application["listing"]["phone"], self.request["phone"])
         self.assertEqual(accounts[self.firebase_user["uid"]]["applicationId"], application_id)
         self.assertEqual(accounts[self.firebase_user["uid"]]["status"], "En attente")
+
+    def test_rejects_unverified_firebase_email(self):
+        self.firebase_user["email_verified"] = False
+        with (
+            patch.object(provider_portal, "db", self.database),
+            patch(
+                "services.provider_portal.firestore.transactional",
+                side_effect=lambda function: function,
+            ),
+            TestClient(self.app) as client,
+        ):
+            response = client.post("/api/professional-applications", json=self.request)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            len(self.database.collection("professionalApplications").documents),
+            0,
+        )
 
     def test_rejects_a_second_application_for_the_same_uid(self):
         with (

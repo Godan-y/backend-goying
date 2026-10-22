@@ -12,7 +12,7 @@ from firebase_admin import firestore
 from google.api_core.exceptions import AlreadyExists
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from dependencies import get_current_firebase_user, require_firebase_user, require_user_profile
+from dependencies import require_user_profile, require_verified_firebase_user
 from firebase import db
 
 
@@ -155,7 +155,7 @@ def _portfolio_upload_files(request: PortfolioUploadRequest) -> list[PortfolioUp
 )
 def create_professional_application(
     request: ProfessionalApplicationRequest,
-    firebase_user: dict = Depends(require_firebase_user),
+    firebase_user: dict = Depends(require_verified_firebase_user),
 ):
     uid = str(firebase_user["uid"]).strip()
     full_name = request.fullName.strip()
@@ -276,7 +276,7 @@ def _pending_application_for_user(firebase_user: dict):
 
 @router.post("/api/professional-payment-status")
 def get_professional_payment_status(
-    firebase_user: dict = Depends(require_firebase_user),
+    firebase_user: dict = Depends(require_verified_firebase_user),
 ):
     _account_reference, _application_reference, application = _pending_application_for_user(
         firebase_user
@@ -289,7 +289,7 @@ def get_professional_payment_status(
 
 @router.post("/api/professional-payment-verification-requests")
 def request_professional_payment_verification(
-    firebase_user: dict = Depends(require_firebase_user),
+    firebase_user: dict = Depends(require_verified_firebase_user),
 ):
     account_reference, application_reference, application = _pending_application_for_user(
         firebase_user
@@ -362,7 +362,7 @@ def _portfolio_image_count(provider_id: str) -> int:
 @router.post("/api/portfolio-uploads")
 def create_portfolio_upload_urls(
     request: PortfolioUploadRequest,
-    firebase_user: dict = Depends(get_current_firebase_user),
+    firebase_user: dict = Depends(require_verified_firebase_user),
     _user_profile: dict = Depends(require_user_profile),
 ):
     provider = _verified_provider_or_error(firebase_user)
@@ -557,7 +557,7 @@ def list_public_providers():
 
 @router.get("/api/provider-missions")
 def list_provider_missions(
-    firebase_user: dict = Depends(get_current_firebase_user),
+    firebase_user: dict = Depends(require_verified_firebase_user),
     _user_profile: dict = Depends(require_user_profile),
 ):
     provider = _verified_provider_or_error(firebase_user)
@@ -581,7 +581,7 @@ def list_provider_missions(
 @router.post("/api/provider-missions/{booking_id}/complete")
 def request_provider_completion(
     booking_id: str,
-    firebase_user: dict = Depends(get_current_firebase_user),
+    firebase_user: dict = Depends(require_verified_firebase_user),
     _user_profile: dict = Depends(require_user_profile),
 ):
     if not booking_id or len(booking_id) > 128:
@@ -621,7 +621,7 @@ def request_provider_completion(
 @router.post("/api/provider-availability")
 def update_provider_availability(
     update: ProviderAvailabilityUpdate,
-    firebase_user: dict = Depends(get_current_firebase_user),
+    firebase_user: dict = Depends(require_verified_firebase_user),
     _user_profile: dict = Depends(require_user_profile),
 ):
     if update.provider_availability not in {"disponible", "indisponible"}:
@@ -640,7 +640,7 @@ def update_provider_availability(
 @router.post("/api/provider-profile")
 def update_provider_profile(
     update: ProviderProfileUpdate,
-    firebase_user: dict = Depends(get_current_firebase_user),
+    firebase_user: dict = Depends(require_verified_firebase_user),
     _user_profile: dict = Depends(require_user_profile),
 ):
     provider = _verified_provider_or_error(firebase_user)

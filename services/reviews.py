@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from firebase_admin import firestore
 from pydantic import BaseModel, ConfigDict, Field
 
-from dependencies import get_current_firebase_user, require_user_profile
+from dependencies import require_user_profile, require_verified_firebase_user
 from firebase import db
 
 
@@ -104,7 +104,7 @@ def list_public_reviews():
 @router.post("/api/booking-reviews", status_code=status.HTTP_201_CREATED)
 def create_booking_review(
     request: BookingReviewRequest,
-    firebase_user: dict = Depends(get_current_firebase_user),
+    firebase_user: dict = Depends(require_verified_firebase_user),
     _user_profile: dict = Depends(require_user_profile),
 ):
     transaction = db.transaction()

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from firebase_admin import firestore
 from pydantic import BaseModel, ConfigDict, Field
 
-from dependencies import get_current_firebase_user, require_admin
+from dependencies import require_admin, require_verified_firebase_user
 from firebase import db
 
 router = APIRouter(tags=["parcours-client"])
@@ -94,12 +94,12 @@ def _prepare_image(user_id: str, area: str, content_type: str):
 
 
 @router.post("/api/property-submission-uploads")
-def prepare_property_image(request: ImagePreparation, user: dict = Depends(get_current_firebase_user)):
+def prepare_property_image(request: ImagePreparation, user: dict = Depends(require_verified_firebase_user)):
     return {"upload": _prepare_image(user["uid"], "property-submissions", request.image.content_type)}
 
 
 @router.post("/api/vehicle-submission-uploads")
-def prepare_vehicle_image(request: ImagePreparation, user: dict = Depends(get_current_firebase_user)):
+def prepare_vehicle_image(request: ImagePreparation, user: dict = Depends(require_verified_firebase_user)):
     return {"upload": _prepare_image(user["uid"], "vehicle-submissions", request.image.content_type)}
 
 
@@ -111,7 +111,7 @@ def _request_id(value: object) -> str:
 
 
 @router.post("/api/property-submissions", status_code=201)
-def submit_property(data: dict, user: dict = Depends(get_current_firebase_user)):
+def submit_property(data: dict, user: dict = Depends(require_verified_firebase_user)):
     required = ("reporterName", "reporterPhone", "country", "city", "province", "commune", "quartier", "avenue", "referencePhotoUrl")
     if any(not isinstance(data.get(key), str) or not data[key].strip() or len(data[key]) > 240 for key in required):
         raise HTTPException(status_code=400, detail="Veuillez compléter les informations et ajouter la photo de référence")
@@ -137,7 +137,7 @@ def submit_property(data: dict, user: dict = Depends(get_current_firebase_user))
 
 
 @router.post("/api/vehicle-submissions", status_code=201)
-def submit_vehicle(data: dict, user: dict = Depends(get_current_firebase_user)):
+def submit_vehicle(data: dict, user: dict = Depends(require_verified_firebase_user)):
     required = ("ownerName", "ownerPhone", "brand", "model", "year", "vehicleType", "country", "city", "commune")
     if any(not isinstance(data.get(key), str) or not data[key].strip() for key in required):
         raise HTTPException(status_code=400, detail="Veuillez compléter les informations obligatoires du véhicule")
@@ -165,7 +165,7 @@ def submit_vehicle(data: dict, user: dict = Depends(get_current_firebase_user)):
 
 
 @router.post("/api/property-bookings", status_code=201)
-def create_property_booking(data: PropertyBookingRequest, user: dict = Depends(get_current_firebase_user)):
+def create_property_booking(data: PropertyBookingRequest, user: dict = Depends(require_verified_firebase_user)):
     phone = re.sub(r"[^0-9+]", "", data.client_phone)
     if not re.fullmatch(r"\+[1-9]\d{7,14}", phone):
         raise HTTPException(status_code=400, detail="Le numéro WhatsApp doit inclure un indicatif international valide")
@@ -201,7 +201,7 @@ def create_property_booking(data: PropertyBookingRequest, user: dict = Depends(g
 
 
 @router.post("/api/vehicle-purchase-requests", status_code=201)
-def create_vehicle_purchase_request(data: VehiclePurchaseRequest, user: dict = Depends(get_current_firebase_user)):
+def create_vehicle_purchase_request(data: VehiclePurchaseRequest, user: dict = Depends(require_verified_firebase_user)):
     phone = re.sub(r"[^0-9+]", "", data.buyer_whatsapp)
     if not re.fullmatch(r"\+[1-9]\d{7,14}", phone):
         raise HTTPException(status_code=400, detail="Le numéro WhatsApp doit inclure un indicatif international valide")
@@ -245,7 +245,7 @@ def create_vehicle_purchase_request(data: VehiclePurchaseRequest, user: dict = D
 
 
 @router.post("/api/car-bookings", status_code=201)
-def create_car_booking(data: CarRentalBookingRequest, user: dict = Depends(get_current_firebase_user)):
+def create_car_booking(data: CarRentalBookingRequest, user: dict = Depends(require_verified_firebase_user)):
     phone = re.sub(r"[^0-9+]", "", data.client_whatsapp)
     if not re.fullmatch(r"\+[1-9]\d{7,14}", phone):
         raise HTTPException(status_code=400, detail="Le numéro WhatsApp doit inclure un indicatif international valide")

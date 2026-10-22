@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from firebase_admin import firestore
 
-from dependencies import get_current_firebase_user
+from dependencies import require_verified_firebase_user
 from firebase import db
 
 
@@ -15,7 +15,7 @@ BOOKING_COLLECTIONS = ("bookings", "carBookings", "propertyBookings")
 @router.delete("/api/bookings/{booking_id}")
 def cancel_booking(
     booking_id: str,
-    firebase_user: dict = Depends(get_current_firebase_user),
+    firebase_user: dict = Depends(require_verified_firebase_user),
 ):
     if not booking_id or len(booking_id) > 128:
         raise HTTPException(status_code=400, detail="Réservation invalide")

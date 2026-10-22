@@ -84,6 +84,17 @@ def require_firebase_user(
     return firebase_user
 
 
+def require_verified_firebase_user(
+    firebase_user: dict = Depends(require_firebase_user),
+) -> dict:
+    if firebase_user.get("email_verified") is not True:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vérifiez votre adresse e-mail avant d’utiliser cette fonctionnalité.",
+        )
+    return firebase_user
+
+
 def require_user_profile(
     firebase_user: dict = Depends(require_firebase_user),
 ) -> dict:

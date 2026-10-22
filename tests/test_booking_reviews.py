@@ -50,7 +50,7 @@ class Database:
 
 class BookingReviewApiTests(unittest.TestCase):
     def setUp(self):
-        self.user = {"uid": "client-1", "email": "client@example.test"}
+        self.user = {"uid": "client-1", "email": "client@example.test", "email_verified": True}
         self.app = FastAPI()
         self.app.include_router(router)
         self.app.dependency_overrides[get_current_firebase_user] = lambda: self.user

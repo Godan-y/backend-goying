@@ -4,7 +4,7 @@ import unicodedata
 from fastapi import APIRouter, Depends, HTTPException
 from firebase_admin import firestore
 
-from dependencies import get_current_firebase_user, require_user_profile
+from dependencies import require_user_profile, require_verified_firebase_user
 from firebase import db
 
 
@@ -43,7 +43,7 @@ def _belongs_to_user(booking: dict, firebase_user: dict) -> bool:
 
 def cancel_booking(
     booking_id: str,
-    firebase_user: dict = Depends(get_current_firebase_user),
+    firebase_user: dict = Depends(require_verified_firebase_user),
     _user_profile: dict = Depends(require_user_profile),
 ):
     if not str(firebase_user.get("uid") or "").strip():
