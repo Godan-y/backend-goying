@@ -717,6 +717,16 @@ def _parse_informations_personnalisees(value: str) -> list[dict[str, str]]:
         ) from exc
 
 
+def _optional_integer(value: int | str | None, field_name: str) -> int | None:
+    """Treat an empty optional number field as unset, while rejecting invalid text."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=f"{field_name} doit être un nombre entier") from exc
+
+
 async def _upload_house_photos(photos: list[UploadFile]) -> list[tuple[str, str]]:
     if any(not photo.filename for photo in photos):
         raise HTTPException(status_code=400, detail="Chaque photo doit avoir un nom de fichier")
@@ -774,9 +784,9 @@ def _house_fields(
         "description": description.strip(),
         "informations_complementaires": informations_complementaires.strip(),
         "informations_personnalisees": _parse_informations_personnalisees(informations_personnalisees),
-        "chambres": chambres,
+        "chambres": _optional_integer(chambres, "Le nombre de chambres"),
         "superficie": superficie.strip(),
-        "salles_bains": salles_bains,
+        "salles_bains": _optional_integer(salles_bains, "Le nombre de salles de bains"),
         "prix": prix,
         "type": type.strip(),
         "telephone": telephone.strip(),
@@ -839,9 +849,9 @@ async def modifier_maison(
     description: str = Form(""),
     informations_complementaires: str = Form(""),
     informations_personnalisees: str = Form("[]"),
-    chambres: int | None = Form(None),
+    chambres: str = Form(""),
     superficie: str = Form(""),
-    salles_bains: int | None = Form(None),
+    salles_bains: str = Form(""),
     prix: float | None = Form(None),
     type: str = Form(""),
     telephone: str = Form(""),
@@ -928,9 +938,9 @@ async def ajouter_maison(
     description: str = Form(""),
     informations_complementaires: str = Form(""),
     informations_personnalisees: str = Form("[]"),
-    chambres: int | None = Form(None),
+    chambres: str = Form(""),
     superficie: str = Form(""),
-    salles_bains: int | None = Form(None),
+    salles_bains: str = Form(""),
     prix: float | None = Form(None),
     type: str = Form(""),
     telephone: str = Form(""),
