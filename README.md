@@ -48,7 +48,6 @@ git add .
 git commit -m "Décris ta modification"
 git push
 
-
 Page d'accueil :
 ```text
 http://127.0.0.1:8000/

@@ -7,13 +7,14 @@ from typing import Literal
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from firebase_admin import firestore
 from google.api_core.exceptions import AlreadyExists
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from dependencies import require_user_profile, require_verified_firebase_user
 from firebase import db
+from services.notification_service import send_notification
 
 
 router = APIRouter(tags=["prestataire"])
@@ -155,6 +156,7 @@ def _portfolio_upload_files(request: PortfolioUploadRequest) -> list[PortfolioUp
 )
 def create_professional_application(
     request: ProfessionalApplicationRequest,
+    background_tasks: BackgroundTasks,
     firebase_user: dict = Depends(require_verified_firebase_user),
 ):
     uid = str(firebase_user["uid"]).strip()
@@ -242,6 +244,7 @@ def create_professional_application(
             detail="L'enregistrement de votre candidature est temporairement indisponible.",
         ) from exc
 
+    background_tasks.add_task(send_notification, "provider_application", "Nouvelle candidature prestataire", "Un prestataire a soumis une candidature.", {"Candidature": application_reference.id, "Nom": full_name, "Spécialité": request.specialty, "Ville": listing.get("city"), "Commune": listing.get("commune")})
     return {
         "applicationId": application_reference.id,
         "status": application["status"],
@@ -289,6 +292,7 @@ def get_professional_payment_status(
 
 @router.post("/api/professional-payment-verification-requests")
 def request_professional_payment_verification(
+    background_tasks: BackgroundTasks,
     firebase_user: dict = Depends(require_verified_firebase_user),
 ):
     account_reference, application_reference, application = _pending_application_for_user(
@@ -318,6 +322,16 @@ def request_professional_payment_verification(
         "paymentVerificationRequestedAt": now,
         "updatedAt": now,
     })
+    background_tasks.add_task(
+        send_notification,
+        "provider_payment_verification",
+        "Vérification prestataire à traiter",
+        "Un prestataire demande la vérification administrative de son dossier.",
+        {
+            "Candidature": application_reference.id,
+            "Prestataire": (application.get("session") or {}).get("fullName"),
+        },
+    )
     return {
         "paymentStatus": update["paymentStatus"],
         "paymentVerificationRequestedAt": now,

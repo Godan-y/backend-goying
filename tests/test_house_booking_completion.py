@@ -1,6 +1,10 @@
 import unittest
 from unittest.mock import ANY, MagicMock, patch
 
+from tests.firebase_test_support import install_firebase_db_stub
+
+install_firebase_db_stub()
+
 from fastapi import HTTPException
 
 from services.maisons import confirmer_visite_maison

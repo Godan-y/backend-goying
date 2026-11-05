@@ -8,12 +8,13 @@ from datetime import date, datetime, timedelta, timezone
 from threading import Lock
 
 import boto3
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from firebase_admin import firestore
 from pydantic import BaseModel, ConfigDict, Field
 
 from dependencies import require_admin, require_verified_firebase_user
 from firebase import db
+from services.notification_service import send_notification
 
 router = APIRouter(tags=["parcours-client"])
 logger = logging.getLogger(__name__)
@@ -111,7 +112,7 @@ def _request_id(value: object) -> str:
 
 
 @router.post("/api/property-submissions", status_code=201)
-def submit_property(data: dict, user: dict = Depends(require_verified_firebase_user)):
+def submit_property(data: dict, background_tasks: BackgroundTasks, user: dict = Depends(require_verified_firebase_user)):
     required = ("reporterName", "reporterPhone", "country", "city", "province", "commune", "quartier", "avenue", "referencePhotoUrl")
     if any(not isinstance(data.get(key), str) or not data[key].strip() or len(data[key]) > 240 for key in required):
         raise HTTPException(status_code=400, detail="Veuillez compléter les informations et ajouter la photo de référence")
@@ -130,6 +131,7 @@ def submit_property(data: dict, user: dict = Depends(require_verified_firebase_u
         values = {key: data.get(key) for key in required + ("category", "policyAcceptance")}
         values.update({"id": ref.id, "reporterUid": user["uid"], "reporterPhone": phone, "status": "En attente", "submittedAt": datetime.now(timezone.utc)})
         ref.create(values)
+        background_tasks.add_task(send_notification, "property_submission", "Nouveau bien soumis", "Un utilisateur a soumis un bien immobilier.", {"Identifiant": ref.id, "Ville": data.get("city"), "Commune": data.get("commune"), "Catégorie": data.get("category")})
         return {"id": ref.id}
     except Exception as exc:
         logger.exception("Échec de soumission immobilière")
@@ -137,7 +139,7 @@ def submit_property(data: dict, user: dict = Depends(require_verified_firebase_u
 
 
 @router.post("/api/vehicle-submissions", status_code=201)
-def submit_vehicle(data: dict, user: dict = Depends(require_verified_firebase_user)):
+def submit_vehicle(data: dict, background_tasks: BackgroundTasks, user: dict = Depends(require_verified_firebase_user)):
     required = ("ownerName", "ownerPhone", "brand", "model", "year", "vehicleType", "country", "city", "commune")
     if any(not isinstance(data.get(key), str) or not data[key].strip() for key in required):
         raise HTTPException(status_code=400, detail="Veuillez compléter les informations obligatoires du véhicule")
@@ -158,6 +160,7 @@ def submit_vehicle(data: dict, user: dict = Depends(require_verified_firebase_us
         values = {key: value for key, value in data.items() if key in allowed}
         values.update({"id": ref.id, "ownerUid": user["uid"], "ownerPhone": phone, "status": "En attente", "submittedAt": datetime.now(timezone.utc)})
         ref.create(values)
+        background_tasks.add_task(send_notification, "vehicle_submission", "Nouveau véhicule soumis", "Un utilisateur a soumis un véhicule à examiner.", {"Identifiant": ref.id, "Véhicule": f"{data.get('brand', '')} {data.get('model', '')}".strip(), "Ville": data.get("city"), "Intention": data.get("listingIntent")})
         return {"id": ref.id}
     except Exception as exc:
         logger.exception("Échec de soumission de véhicule")
@@ -165,7 +168,7 @@ def submit_vehicle(data: dict, user: dict = Depends(require_verified_firebase_us
 
 
 @router.post("/api/property-bookings", status_code=201)
-def create_property_booking(data: PropertyBookingRequest, user: dict = Depends(require_verified_firebase_user)):
+def create_property_booking(data: PropertyBookingRequest, background_tasks: BackgroundTasks, user: dict = Depends(require_verified_firebase_user)):
     phone = re.sub(r"[^0-9+]", "", data.client_phone)
     if not re.fullmatch(r"\+[1-9]\d{7,14}", phone):
         raise HTTPException(status_code=400, detail="Le numéro WhatsApp doit inclure un indicatif international valide")
@@ -192,6 +195,7 @@ def create_property_booking(data: PropertyBookingRequest, user: dict = Depends(r
         transaction.create(booking_ref, {"serviceType": "Immobilier", "itemName": str(house.get("titre") or "Maison"), "status": "En attente", "statut": "En attente", "clientUid": user["uid"], "clientId": user["uid"], "clientName": data.client_name.strip(), "nom_client": data.client_name.strip(), "clientEmail": str(user.get("email") or ""), "clientWhatsApp": phone, "telephone_client": phone, "propertyId": data.property_id, "bien_id": data.property_id, "type_bien": "maison", "titre_bien": str(house.get("titre") or "Maison"), "photo_bien": str(house.get("photo_url") or ""), "localisation": str(house.get("commune") or house.get("adresse") or ""), "visitDate": data.visit_date, "visitTime": data.visit_time, "date": data.visit_date, "createdAt": datetime.now(timezone.utc)})
     try:
         save_booking(transaction)
+        background_tasks.add_task(send_notification, "property_booking", "Nouvelle réservation immobilière", "Une réservation immobilière a été créée.", {"Réservation": booking_ref.id, "Bien": data.property_id, "Client": data.client_name.strip(), "Date de visite": data.visit_date})
         return {"id": booking_ref.id}
     except HTTPException:
         raise
@@ -201,7 +205,7 @@ def create_property_booking(data: PropertyBookingRequest, user: dict = Depends(r
 
 
 @router.post("/api/vehicle-purchase-requests", status_code=201)
-def create_vehicle_purchase_request(data: VehiclePurchaseRequest, user: dict = Depends(require_verified_firebase_user)):
+def create_vehicle_purchase_request(data: VehiclePurchaseRequest, background_tasks: BackgroundTasks, user: dict = Depends(require_verified_firebase_user)):
     phone = re.sub(r"[^0-9+]", "", data.buyer_whatsapp)
     if not re.fullmatch(r"\+[1-9]\d{7,14}", phone):
         raise HTTPException(status_code=400, detail="Le numéro WhatsApp doit inclure un indicatif international valide")
@@ -236,6 +240,7 @@ def create_vehicle_purchase_request(data: VehiclePurchaseRequest, user: dict = D
         })
     try:
         save_request(transaction)
+        background_tasks.add_task(send_notification, "vehicle_purchase_request", "Nouvelle demande d'achat de véhicule", "Un acheteur a envoyé une demande pour une annonce disponible.", {"Demande": request_ref.id, "Véhicule": data.vehicle_id, "Acheteur": data.buyer_name.strip(), "Commune": data.buyer_commune.strip()})
         return {"id": request_ref.id, "status": "Nouvelle"}
     except HTTPException:
         raise
@@ -245,7 +250,7 @@ def create_vehicle_purchase_request(data: VehiclePurchaseRequest, user: dict = D
 
 
 @router.post("/api/car-bookings", status_code=201)
-def create_car_booking(data: CarRentalBookingRequest, user: dict = Depends(require_verified_firebase_user)):
+def create_car_booking(data: CarRentalBookingRequest, background_tasks: BackgroundTasks, user: dict = Depends(require_verified_firebase_user)):
     phone = re.sub(r"[^0-9+]", "", data.client_whatsapp)
     if not re.fullmatch(r"\+[1-9]\d{7,14}", phone):
         raise HTTPException(status_code=400, detail="Le numéro WhatsApp doit inclure un indicatif international valide")
@@ -307,6 +312,7 @@ def create_car_booking(data: CarRentalBookingRequest, user: dict = Depends(requi
         return total
     try:
         total = save_booking(transaction)
+        background_tasks.add_task(send_notification, "car_booking", "Nouvelle réservation automobile", "Une réservation de véhicule a été créée.", {"Réservation": booking_ref.id, "Véhicule": data.vehicle_id, "Client": data.client_name.strip(), "Début": start.isoformat(), "Durée (jours)": data.duration_days})
         return {"id": booking_ref.id, "status": "En attente", "totalPrice": total}
     except HTTPException:
         raise
@@ -316,7 +322,7 @@ def create_car_booking(data: CarRentalBookingRequest, user: dict = Depends(requi
 
 
 @router.post("/api/partnership-requests", status_code=201)
-def create_partnership(data: dict, request: Request):
+def create_partnership(data: dict, request: Request, background_tasks: BackgroundTasks):
     now = time.time()
     key = request.client.host if request.client else "unknown"
     with _PARTNERSHIP_LOCK:
@@ -336,6 +342,7 @@ def create_partnership(data: dict, request: Request):
     try:
         ref = db.collection("partnershipRequests").document()
         ref.create(values)
+        background_tasks.add_task(send_notification, "partnership_request", "Nouvelle demande de partenariat", "Une organisation a soumis une proposition de partenariat.", {"Demande": ref.id, "Organisation": values["organizationName"], "Contact": values["contactName"], "Domaine": values["collaborationArea"]})
         return {"id": ref.id}
     except Exception as exc:
         logger.exception("Échec de proposition de partenariat")

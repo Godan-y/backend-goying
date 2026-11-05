@@ -5,7 +5,7 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 
@@ -23,7 +23,15 @@ def require_firebase_user():
     raise HTTPException(status_code=401, detail="Authentication required")
 
 
+def require_admin(firebase_user=Depends(require_firebase_user)):
+    if firebase_user.get("admin") is not True:
+        raise HTTPException(status_code=403, detail="Administrator access required")
+    return firebase_user
+
+
 fake_dependencies.get_current_firebase_user = require_firebase_user
+fake_dependencies.require_verified_firebase_user = require_firebase_user
+fake_dependencies.require_admin = require_admin
 _module_names = ("firebase_admin", "firebase", "dependencies")
 _previous_modules = {name: sys.modules.get(name) for name in _module_names}
 try:

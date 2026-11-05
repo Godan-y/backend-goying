@@ -2,6 +2,10 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
+from tests.firebase_test_support import install_firebase_db_stub
+
+install_firebase_db_stub()
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -57,15 +61,63 @@ class BookingReviewApiTests(unittest.TestCase):
         self.app.dependency_overrides[require_user_profile] = lambda: {"uid": "client-1"}
         self.client = TestClient(self.app)
 
-    def _post_review(self, database, booking_id="booking-1"):
+    def _post_review(self, database, booking_id="booking-1", comment="Très bien"):
+        payload = {"bookingId": booking_id, "rating": 5}
+        if comment is not None:
+            payload["comment"] = comment
         with (
             patch("services.reviews.db", database),
             patch("services.reviews.firestore.transactional", side_effect=lambda fn: fn),
         ):
             return self.client.post(
                 "/api/booking-reviews",
-                json={"bookingId": booking_id, "rating": 5, "comment": "Très bien"},
+                json=payload,
             )
+
+    def test_review_notification_includes_real_comment_and_excludes_client_uid(self):
+        database = Database({
+            "propertyBookings": {
+                "booking-1": Reference({
+                    "serviceType": "Immobilier",
+                    "status": "Terminé",
+                    "completedAt": datetime.now(timezone.utc),
+                    "clientId": "client-1",
+                    "propertyId": "house-1",
+                }),
+            },
+            "maisons": {"house-1": Reference({"note": 4, "avis": 1})},
+        })
+
+        with patch("services.reviews.send_notification") as notify:
+            response = self._post_review(database, comment="Très bien entretenue")
+
+        self.assertEqual(response.status_code, 201)
+        details = notify.call_args.args[3]
+        self.assertEqual(details["Réservation"], "booking-1")
+        self.assertEqual(details["Note"], 5)
+        self.assertEqual(details["Commentaire"], "Très bien entretenue")
+        self.assertNotIn("Client", details)
+        self.assertNotIn(self.user["uid"], details.values())
+
+    def test_review_notification_omits_comment_when_none_was_submitted(self):
+        database = Database({
+            "propertyBookings": {
+                "booking-1": Reference({
+                    "serviceType": "Immobilier",
+                    "status": "Terminé",
+                    "completedAt": datetime.now(timezone.utc),
+                    "clientId": "client-1",
+                    "propertyId": "house-1",
+                }),
+            },
+            "maisons": {"house-1": Reference({"note": 4, "avis": 1})},
+        })
+
+        with patch("services.reviews.send_notification") as notify:
+            response = self._post_review(database, comment=None)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertNotIn("Commentaire", notify.call_args.args[3])
 
     def test_confirmed_house_visit_review_updates_house_aggregate(self):
         database = Database({
@@ -180,12 +232,13 @@ class BookingReviewApiTests(unittest.TestCase):
     def test_duplicate_review_is_rejected(self):
         booking = Reference({
             "serviceType": "Automobile", "status": "Terminé", "clientId": "client-1",
-            "completedAt": datetime.now(timezone.utc),
+            "completedAt": datetime.now(timezone.utc), "vehicleId": "vehicle-1",
         })
         review = Reference({"rating": 4})
         database = Database({
             "carBookings": {"booking-1": booking},
             "reviews": {"carBookings_booking-1": review},
+            "vehicles": {"vehicle-1": Reference({"rating": 4, "reviewsCount": 1})},
         })
 
         response = self._post_review(database)

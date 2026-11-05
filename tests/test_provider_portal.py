@@ -1,6 +1,10 @@
 import unittest
 from unittest.mock import patch
 
+from tests.firebase_test_support import install_firebase_db_stub
+
+install_firebase_db_stub()
+
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
@@ -282,6 +286,7 @@ class ProviderApplicationTests(unittest.TestCase):
     def test_records_a_payment_verification_request_without_approving_provider(self):
         with (
             patch.object(provider_portal, "db", self.database),
+            patch("services.provider_portal.send_notification") as notify,
             patch(
                 "services.provider_portal.firestore.transactional",
                 side_effect=lambda function: function,
@@ -303,6 +308,14 @@ class ProviderApplicationTests(unittest.TestCase):
         self.assertEqual(application["paymentStatus"], "Vérification demandée")
         self.assertIn("paymentVerificationRequestedAt", application)
         self.assertEqual(account["paymentStatus"], "Vérification demandée")
+        verification_notification = next(
+            call for call in notify.call_args_list
+            if call.args[0] == "provider_payment_verification"
+        )
+        self.assertNotIn("UID", verification_notification.args[3])
+        self.assertNotIn(self.firebase_user["uid"], verification_notification.args[3].values())
+        self.assertIn("Candidature", verification_notification.args[3])
+        self.assertIn("Prestataire", verification_notification.args[3])
 
 
 class ProviderProfileUpdateTests(unittest.TestCase):

@@ -2,12 +2,13 @@ import logging
 import unicodedata
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from firebase_admin import firestore
 from pydantic import BaseModel, ConfigDict, Field
 
 from dependencies import require_user_profile, require_verified_firebase_user
 from firebase import db
+from services.notification_service import send_notification
 
 
 router = APIRouter()
@@ -104,6 +105,7 @@ def list_public_reviews():
 @router.post("/api/booking-reviews", status_code=status.HTTP_201_CREATED)
 def create_booking_review(
     request: BookingReviewRequest,
+    background_tasks: BackgroundTasks,
     firebase_user: dict = Depends(require_verified_firebase_user),
     _user_profile: dict = Depends(require_user_profile),
 ):
@@ -252,7 +254,22 @@ def create_booking_review(
         return {"rating": request.rating, "reviewsCount": 1}
 
     try:
-        return save_review(transaction)
+        result = save_review(transaction)
+        notification_details = {
+            "Réservation": request.booking_id,
+            "Note": request.rating,
+        }
+        comment = request.comment.strip()
+        if comment:
+            notification_details["Commentaire"] = comment
+        background_tasks.add_task(
+            send_notification,
+            "booking_review",
+            "Nouvel avis reçu",
+            "Un client a laissé un avis sur une réservation terminée.",
+            notification_details,
+        )
+        return result
     except HTTPException:
         raise
     except Exception as exc:

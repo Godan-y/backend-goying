@@ -2,6 +2,10 @@ import unittest
 import inspect
 from unittest.mock import MagicMock, patch
 
+from tests.firebase_test_support import install_firebase_db_stub
+
+install_firebase_db_stub()
+
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from fastapi.security import HTTPAuthorizationCredentials
