@@ -1,6 +1,9 @@
 import os
+import io
+import json
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from services import notification_service
 
@@ -39,6 +42,36 @@ class NotificationServiceTests(unittest.TestCase):
         with patch.object(notification_service, "_send_with_resend", side_effect=OSError("offline")), \
              self.assertLogs(notification_service.logger, level="ERROR"):
             notification_service.send_notification("event", "Title", "Message")
+
+    def test_http_error_body_is_logged_with_sensitive_values_redacted(self):
+        response_body = json.dumps({
+            "statusCode": 403,
+            "name": "validation_error",
+            "message": "Sender domain rejected for admin@example.test, phone +33123456789",
+            "token": "private-token-value",
+        }).encode("utf-8")
+        error = HTTPError(
+            "https://api.resend.com/emails",
+            403,
+            "Forbidden",
+            hdrs=None,
+            fp=io.BytesIO(response_body),
+        )
+
+        with patch.object(notification_service, "_send_with_resend", side_effect=error), \
+             self.assertLogs(notification_service.logger, level="ERROR") as logs:
+            notification_service.send_notification(
+                "event", "Title", "Message", {"Contact": "Alice Example"}
+            )
+
+        logged = "\n".join(logs.output)
+        self.assertIn("validation_error", logged)
+        self.assertIn("Sender domain rejected", logged)
+        self.assertNotIn("admin@example.test", logged)
+        self.assertNotIn("+33123456789", logged)
+        self.assertNotIn("private-token-value", logged)
+        self.assertNotIn("test-key", logged)
+        self.assertNotIn("Alice Example", logged)
 
 
 if __name__ == "__main__":
