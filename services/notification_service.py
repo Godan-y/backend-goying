@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
 RESEND_API_URL = "https://api.resend.com/emails"
+USER_AGENT = "Goying-Backend/1.0"
 _EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
 _PHONE_PATTERN = re.compile(r"(?<!\w)\+?\d[\d\s().-]{6,}\d(?!\w)")
 _BEARER_PATTERN = re.compile(r"\bBearer\s+\S+", re.IGNORECASE)
@@ -30,6 +31,7 @@ def _send_with_resend(*, api_key: str, payload: dict) -> None:
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "User-Agent": USER_AGENT,
         },
         method="POST",
     )

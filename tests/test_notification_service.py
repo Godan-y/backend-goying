@@ -2,7 +2,7 @@ import os
 import io
 import json
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError
 
 from services import notification_service
@@ -17,6 +17,18 @@ class NotificationServiceTests(unittest.TestCase):
         })
         self.env.start()
         self.addCleanup(self.env.stop)
+
+    def test_resend_request_has_descriptive_user_agent(self):
+        response = MagicMock()
+        response.__enter__.return_value.status = 200
+        with patch.object(notification_service, "urlopen", return_value=response) as urlopen:
+            notification_service._send_with_resend(
+                api_key="test-key",
+                payload={"from": "Goying <alerts@example.test>"},
+            )
+
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.get_header("User-agent"), "Goying-Backend/1.0")
 
     def test_sends_resend_payload_through_provider_adapter(self):
         with patch.object(notification_service, "_send_with_resend") as send:
