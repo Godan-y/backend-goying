@@ -3,9 +3,11 @@ import hashlib
 import os
 import re
 import time
+import unicodedata
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from threading import Lock
+from typing import Literal
 
 import boto3
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -41,6 +43,21 @@ class PropertyBookingRequest(BaseModel):
     client_phone: str = Field(alias="clientPhone", min_length=8, max_length=32)
     visit_date: str = Field(alias="visitDate", min_length=10, max_length=10)
     visit_time: str = Field(alias="visitTime", min_length=5, max_length=5)
+
+
+class ProviderBookingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    service_type: Literal["Chauffeur", "Service à la personne"] = Field(alias="serviceType")
+    provider_id: str = Field(alias="providerId", min_length=1, max_length=128)
+    provider_collection: Literal["chauffeurs", "providers"] = Field(alias="providerCollection")
+    booking_date: str = Field(alias="date", min_length=1, max_length=160)
+    details: str = Field(min_length=1, max_length=2000)
+    cost_info: str = Field(alias="costInfo", min_length=1, max_length=160)
+    client_name: str = Field(alias="clientName", min_length=1, max_length=160)
+    client_whatsapp: str = Field(alias="clientWhatsApp", min_length=8, max_length=32)
+    service_address: str = Field(alias="serviceAddress", min_length=1, max_length=300)
+    service_location_type: Literal["Maison", "Entreprise"] = Field(alias="serviceLocationType")
 
 
 class VehiclePurchaseRequest(BaseModel):
@@ -202,6 +219,116 @@ def create_property_booking(data: PropertyBookingRequest, background_tasks: Back
     except Exception as exc:
         logger.exception("Échec de réservation immobilière")
         raise HTTPException(status_code=503, detail="La réservation immobilière n'a pas pu être enregistrée") from exc
+
+
+def _normalize_provider_value(value: object) -> str:
+    return unicodedata.normalize("NFD", str(value or "").strip().lower()).encode(
+        "ascii", "ignore"
+    ).decode("ascii")
+
+
+@router.post("/api/provider-bookings", status_code=201)
+def create_provider_booking(
+    data: ProviderBookingRequest,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(require_verified_firebase_user),
+):
+    phone = re.sub(r"[^0-9+]", "", data.client_whatsapp)
+    if not re.fullmatch(r"\+[1-9]\d{7,14}", phone):
+        raise HTTPException(status_code=400, detail="Le numéro WhatsApp doit inclure un indicatif international valide")
+
+    provider_ref = db.collection(data.provider_collection).document(data.provider_id)
+    booking_ref = db.collection("bookings").document()
+    transaction = db.transaction()
+
+    @firestore.transactional
+    def save_booking(transaction):
+        provider_snapshot = provider_ref.get(transaction=transaction)
+        provider = provider_snapshot.to_dict() if provider_snapshot.exists else None
+        if not provider or str(provider.get("verified", "")).strip().lower() != "true":
+            raise HTTPException(status_code=404, detail="Prestataire introuvable")
+
+        specialty = _normalize_provider_value(
+            provider.get("specialty") or provider.get("categorie") or provider.get("specialite")
+        )
+        if data.service_type == "Chauffeur":
+            if specialty != "chauffeur":
+                raise HTTPException(status_code=400, detail="Ce prestataire n'est pas un chauffeur")
+        else:
+            allowed_specialties = {"menagere", "coiffeur", "maquilleuse", "professeur"}
+            if specialty not in allowed_specialties:
+                raise HTTPException(status_code=400, detail="Spécialité de prestataire invalide")
+
+        availability = _normalize_provider_value(
+            provider.get("providerAvailability")
+            or provider.get("availability")
+            or provider.get("status")
+            or "disponible"
+        )
+        if availability == "indisponible":
+            raise HTTPException(status_code=409, detail="Ce prestataire n'est plus disponible")
+
+        provider_name = str(provider.get("name") or provider.get("nom") or "Prestataire").strip()
+        booking = {
+            "serviceType": data.service_type,
+            "itemName": provider_name,
+            "date": data.booking_date.strip(),
+            "status": "En attente",
+            "statut": "En attente",
+            "details": data.details.strip(),
+            "costInfo": data.cost_info.strip(),
+            "clientUid": user["uid"],
+            "clientId": user["uid"],
+            "clientName": data.client_name.strip(),
+            "clientEmail": str(user.get("email") or ""),
+            "clientWhatsApp": phone,
+            "telephone_client": phone,
+            "serviceAddress": data.service_address.strip(),
+            "serviceLocationType": data.service_location_type,
+            "providerId": data.provider_id,
+            "providerCollection": data.provider_collection,
+            "provider": {
+                "id": data.provider_id,
+                "name": provider_name,
+                "specialty": str(provider.get("specialty") or provider.get("categorie") or ""),
+            },
+            "createdAt": datetime.now(timezone.utc),
+            "acknowledgedByClient": False,
+        }
+        transaction.create(booking_ref, booking)
+        # La mise à jour transactionnelle empêche les réservations concurrentes d'un chauffeur.
+        if data.service_type == "Chauffeur":
+            transaction.update(
+                provider_ref,
+                {
+                    "status": "indisponible",
+                    "availability": "indisponible",
+                    "providerAvailability": "indisponible",
+                },
+            )
+        return provider_name
+
+    try:
+        provider_name = save_booking(transaction)
+        background_tasks.add_task(
+            send_notification,
+            "provider_booking",
+            "Nouvelle réservation de prestataire",
+            "Une réservation de prestataire a été créée.",
+            {
+                "Réservation": booking_ref.id,
+                "Prestataire": provider_name,
+                "Service": data.service_type,
+                "Date": data.booking_date.strip(),
+                "Client": data.client_name.strip(),
+            },
+        )
+        return {"id": booking_ref.id, "status": "En attente"}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Échec de réservation de prestataire")
+        raise HTTPException(status_code=503, detail="La réservation n'a pas pu être enregistrée") from exc
 
 
 @router.post("/api/vehicle-purchase-requests", status_code=201)
